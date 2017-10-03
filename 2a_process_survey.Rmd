@@ -8,99 +8,169 @@ vignette: >
   \usepackage[utf8]{inputenc} 
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/home/brian/Documents/Bycatch/WCGOP/data/')
+```
+
 This vignette demonstrates how we downloaded and processed the data for:
 
 > Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. "Random forests outperform other species distribution models for spatiotemporal fisheries bycatch prediction."
 
+If you are not interested in the data processing, you can skip ahead to `2b_run_models`, which uses the saved output of this script (`wcann_processed.RData`) to run the spatial models.
+
+### Download the data
+
 Because the fisheries observer datasets we used are confidential ([WCGOP](https://www.nwfsc.noaa.gov/research/divisions/fram/observation/data_collection/manuals/2017%20WCGOP%20Training%20Manual%20Final%20website%20copy.pdf), [HILL](http://www.nmfs.noaa.gov/pr/interactions/fkwtrt/meeting1/handouts/observer_manual.pdf)), here we perform the same analyses using the publically available [West Coast Groundfish Trawl Survey](https://www.nwfsc.noaa.gov/research/divisions/fram/groundfish/bottom_trawl.cfm).
 
-If you 
+Download the data from [FRAM](https://www.nwfsc.noaa.gov/data/map):
+  1. Search for "darkblotched rockfish", "yelloweye rockfish", and "Pacific halibut"
+  2. Start date: 1/1/2003, End date: 12/31/2012
+  3. Layers --> Trawl Survey --> Click "CSV" next to *Catch* and *Haul Characteristics* to download two files:
+  - `wcann_catch_fram.csv`: which species and how much of each were caught in each haul
+  - `wcann_haul_fram.csv`: haul stats (e.g. time/lat/long in/out, depth, etc.)
+  
+### Load data into R
 
-# Want to get data frame where each row is a unique haul, with the following columns:
-#   - HAUL_ID: haul ID as in HAUL$Trawl.Id
-#   - YEAR: year
-#   - DATE: HAUL$Trawl.Date
-#   - TIME: HAUL$Trawl.Start.Time
-#   - LAT
-#   - LONG
-#   - DEPTH
-#   - EFFORT1: area swept
-#   - EFFORT2: haul duration
-#   - BOT_TEMP: bottom temperature (at gear)
-#   - YEYE: yelloweye rockfish catch weight in kg (species=="Sebastes ruberrimus", 0 for all other hauls)
-#   - DBRK: darkblotched rockfish catch weight in kg (species=="Sebastes crameri", 0 for all other hauls)
-#   - PHLB: Pacific halibut catch weight in kg (species=="Hippoglossus stenolepis", 0 for all other hauls)
-#   - SST: sea-surface temperature - have to get online
+```{r}
+# set working directory to workshop folder with data files
+setwd("/home/brian/Documents/Bycatch/WCGOP/data/")
+# load haul dataset
+HAUL <- read.csv("wcann_haul_fram.csv",header=TRUE)
+# load catch dataset
+CATCH <- read.csv("wcann_catch_fram.csv",header=TRUE)
+```
 
-library(dplyr)
-library(PBSmapping)
-library(maps)
-library(fields)
-library(gplots)
-library(sp)
-library(INLA)
-library(ncdf)
-library(date)
-library(mvtnorm)
-library(ROCR)
-library(splancs)
-library(MASS)
+### Combine `HAUL` and `CATCH`
 
-setwd("/home/brian/Documents/Bycatch/WCGOP/data") 				# linux
-HAUL <- read.csv("wcann_haul.csv",header=TRUE)
-FISH <- read.csv("wcann_fish.csv",header=TRUE)
+We want a data frame `dat` where each row is a unique haul, with the following columns:
 
-# For some reason, the HAUL dataset is duplicated - remove duplicate rows
-hauls <- unique(HAUL$Trawl.Id)
+- HAUL_ID: HAUL$trawl_id
+- YEAR: have to calculate from DATE
+- DATE: HAUL$date_yyyymmdd
+- LAT: latitude, HAUL$latitude_hi_prec_dd
+- LON: longitude, HAUL$longitude_hi_prec_dd
+- DEPTH: depth (in m), HAUL$depth_hi_prec_m
+- TOTAL: total vertebrate catch in kg (HAUL$vertebrate_weight_kg)
+- DBRK: darkblotched rockfish catch in kg (CATCH$total_catch_wt_kg for "Sebastes crameri")
+- PHLB: Pacific halibut catch in kg (CATCH$total_catch_wt_kg for "Hippoglossus stenolepis")
+- YEYE: yelloweye rockfish catch in kg (CATCH$total_catch_wt_kg for "Sebastes ruberrimus")
+
+```{r}
+# Delete "unsatisfactory" hauls
+HAUL <- subset(HAUL, performance=="Satisfactory")
+# Create empty data frame where each row will be a unique haul
+cols <- c("HAUL_ID","YEAR","DATE","LAT","LON","DEPTH","TOTAL","DBRK","PHLB","YEYE")
+hauls <- unique(HAUL$trawl_id)
 n.hauls <- length(hauls)
-HAUL <- HAUL[1:n.hauls,]
+dat <- matrix(NA, nrow=n.hauls, ncol=length(cols))
+dat <- as.data.frame(dat)
+names(dat) <- cols
+head(dat)
+```
 
-# Create data frame where each row is a unique haul
-#   Center/de-mean the covariates (subtract mean from each observation)
-na_vec <- rep(NA,n.hauls)
-zero_vec <- rep(0,n.hauls)
-dat <- data.frame(HAUL_ID=na_vec,YEAR=na_vec,DATE=as.Date(na_vec),TIME=na_vec,LAT=na_vec,LONG=na_vec,DEPTH=na_vec,EFFORT1=na_vec,EFFORT2=na_vec,BOT_TEMP=na_vec,SST=na_vec,YEYE=zero_vec,DBRK=zero_vec,PHLB=zero_vec)
-dat$HAUL_ID <- HAUL$Trawl.Id
-dat$DATE <- as.Date(HAUL$Trawl.Date,format = "%m/%d/%y")
+```{r}
+# Fill in columns from HAUL
+dat$HAUL_ID <- HAUL$trawl_id
+dat$LAT <- HAUL$latitude_dd
+dat$LON <- HAUL$longitude_dd
+dat$DEPTH <- HAUL$depth_hi_prec_m
+dat$DATE <- as.Date(as.character(HAUL$date_yyyymmdd),format = "%Y%m%d")
 dat$YEAR <- as.numeric(format(dat$DATE,"%Y"))
-dat$TIME <- as.POSIXct(as.character(HAUL$Trawl.Start.Time), format = "%m/%d/%y %H:%M", tz="US/Pacific")
-attr(dat$TIME, "tzone") <- "US/Pacific"
-dat$LAT <- HAUL$Best.Latitude..dd.
-dat$LONG <- HAUL$Best.Longitude..dd.
-dat$DEPTH <- HAUL$Best.Depth..m.
-dat$EFFORT1 <- HAUL$Area.Swept.by.the.Net..hectares.
-dat$EFFORT2 <- HAUL$Trawl.Duration..min.
-dat$BOT_TEMP <- HAUL$Temperature.At.the.Gear..degs.C.
+dat$TOTAL <- HAUL$vertebrate_weight_kg
+dat$TOTAL[which(is.na(dat$TOTAL))] <- 0 # replace NA with 0
+```
+
+```{r}
+# Add catch of each species by haul (takes a couple min)
+library(dplyr)
+dat$YEYE <- dat$DBRK <- dat$PHLB <- 0
 for(i in 1:n.hauls){
-	cur_haul <- filter(FISH,Trawl.Id==dat$HAUL_ID[i])
-	if("Sebastes ruberrimus" %in% cur_haul$Species) dat$YEYE[i] <- as.numeric(dplyr::filter(cur_haul,Species=="Sebastes ruberrimus") %>% dplyr::select(Haul.Weight..kg.))
-	if("Sebastes crameri" %in% cur_haul$Species) dat$DBRK[i] <- as.numeric(dplyr::filter(cur_haul,Species=="Sebastes crameri") %>% dplyr::select(Haul.Weight..kg.))
-	if("Hippoglossus stenolepis" %in% cur_haul$Species) dat$PHLB[i] <- as.numeric(dplyr::filter(cur_haul,Species=="Hippoglossus stenolepis") %>% dplyr::select(Haul.Weight..kg.))
+  # get all species caught in the ith haul
+	cur_haul <- filter(CATCH, trawl_id==dat$HAUL_ID[i])
+	if("yelloweye rockfish" %in% cur_haul$common_name) dat$YEYE[i] <- as.numeric(dplyr::filter(cur_haul, common_name=="yelloweye rockfish") %>% dplyr::select(total_catch_wt_kg))
+	if("darkblotched rockfish" %in% cur_haul$common_name) dat$DBRK[i] <- as.numeric(dplyr::filter(cur_haul,common_name=="darkblotched rockfish") %>% dplyr::select(total_catch_wt_kg))
+	if("Pacific halibut" %in% cur_haul$common_name) dat$PHLB[i] <- as.numeric(dplyr::filter(cur_haul,common_name=="Pacific halibut") %>% dplyr::select(total_catch_wt_kg))
 }
+# Order by date
+dat <- dat[order(dat$DATE),]
+```
 
-# Read in "get_SST" function from "process_wcgop.r"
-dat <- get_SST(dat)
-# delete any records where SST is NA (71 of 6453)
+### Add SST covariate
+  - `SST`: daily sea surface temperature anomalies (in degC)
+  
+Download daily sea surface temperature anomalies (.nc files) for 2003-2013 from: https://www.esrl.noaa.gov/psd/data/gridded/data.noaa.oisst.v2.highres.html 
+
+```{r eval=TRUE, echo=TRUE, results='hide'}
+# function to get SST daily anomaly at the DATE/LON/LAT for each haul
+#   uses bilinear interpolation from nearest gridpoints
+library(ncdf4)
+get_SST <- function(dat){
+  for(i in 1:dim(dat)[1]){ # for each row i
+    this.yr = dat$YEAR[i]
+    nc = nc_open(paste("/home/brian/Documents/Bycatch/WCGOP/data/sst.day.anom.",this.yr,".v2.nc",sep="")) # you will need to edit to where you saved the .nc files
+    ncdates = nc$dim$time$vals 							# gets vector of dates of the current year
+    ncdates = as.Date(ncdates,origin = '1800-1-1')    	# formats date vector
+    date1a = which.min(abs(dat$DATE[i] - ncdates)) 		# finds the day of the calendar year for this haul (e.g. 01/04/year = 4, and 02/01/year = 32)
+    all.lat = nc$dim$lat$vals 							
+    lat1a = which.min(abs(dat$LAT[i] - all.lat))		# index of haul's LAT
+    all.lon = nc$dim$lon$vals
+    lon1a = which.min(abs(((180+dat$LON[i])+180) - all.lon)) # index of haul's LON
+    	
+    this.lon = 360+dat$LON[i] 							# haul LONG
+    this.lat = dat$LAT[i] 								# haul LAT
+    lat.hi = which(all.lat > dat$LAT[i])[1] 			# index of LAT *just above* haul LAT
+    lat.lo = lat.hi - 1 								# index of LAT *just below* haul LAT
+    lon.hi = which(all.lon > (360+dat$LON[i]))[1] 		# index of LONG *just above* haul LON
+    lon.lo = lon.hi - 1 								# index of LON *just below* haul LONG
+
+    # get the SST anomolies from the ncdf object
+      # start = X,Y,time (anom object is 3-D)
+      # count = how many points to read in each dim
+      # sstfield grabs the SST anomolies for all lat/lon points on the date of the haul
+    sstfield = ncvar_get(nc, "anom", start=c(1,1,date1a), count=c(length(all.lon),length(all.lat),1))
+    sst00 = sstfield[lon.lo,lat.lo]
+    sst01 = sstfield[lon.lo,lat.hi]        
+    sst10 = sstfield[lon.hi,lat.lo]
+    sst11 = sstfield[lon.hi,lat.hi]
+   
+    if(is.na(sst00)) sst00 = sst10
+    if(is.na(sst10)) sst10 = sst00
+    if(is.na(sst01)) sst01 = sst11
+    if(is.na(sst11)) sst11 = sst01
+    
+    # This math makes sense if you draw it out       
+    # We first do linear interpolation in the x-direction. This yields
+    fR1 = (all.lon[lon.hi]-this.lon)/(all.lon[lon.hi]-all.lon[lon.lo])*sst00 + (this.lon-all.lon[lon.lo])/(all.lon[lon.hi]-all.lon[lon.lo])*sst10
+	fR2 = (all.lon[lon.hi]-this.lon)/(all.lon[lon.hi]-all.lon[lon.lo])*sst01 + (this.lon-all.lon[lon.lo])/(all.lon[lon.hi]-all.lon[lon.lo])*sst11
+	# Next do interpolation of these values in Y-direction. This yields, 
+	sst.interp = (all.lat[lat.hi]-this.lat)/(all.lat[lat.hi]-all.lat[lat.lo])*fR1 + (this.lat-all.lat[lat.lo])/(all.lat[lat.hi]-all.lat[lat.lo])*fR2
+	print(paste(i,sst.interp,sep="  "))
+	dat$SST[i] = sst.interp
+    nc_close(nc)
+  } # end for loop over haul points
+  return(dat)
+} # end function get_SST
+
+dat$SST = 0
+dat <- get_SST(dat) # takes about 5 min to do all 7,240 locations
+
+# delete records where SST is NA
 dat <- dat[-which(is.na(dat$SST)),]
+```
 
-# Check for NAs in all dat columns
-col.na <- function(vec){ return(length(which(is.na(vec))))} # returns number of NAs in a vector
-apply(dat,2,col.na)
-# bottom/gear temp has 274 NAs - remove them
-dat <- dat[-which(is.na(dat$BOT_TEMP)),]
+### Add inRCA covariate:
+  - `inRCA`: was the haul in/near a Rockfish Conservation Area? 0/1
 
-# get new number of hauls (6108)
-n.hauls <- dim(dat)[1]
+*Note:* The Rockfish Conservation Area (RCA) boundaries have changed by month, year, latitude, and depth. We have prepared `rca_boundaries.csv` using historical RCA boundaries. For more details, see the [RCA webpage](http://www.westcoast.fisheries.noaa.gov/fisheries/management/groundfish_closures/rockfish_areas.html).
 
-# Non-zero catch rates
-length(which(dat$PHLB!=0))/n.hauls # 0.081
-length(which(dat$DBRK!=0))/n.hauls # 0.177
-length(which(dat$YEYE!=0))/n.hauls # 0.021
-
-# Add rockdist, rocksize, and inRCA covariates (from Blake)
+```{r}
 library(tidyr)
+
+# Get historical RCA boundary limits
 rca <- read.csv("/home/brian/Documents/Bycatch/WCGOP/data/rca_boundaries.csv",header=TRUE)
 
+# Get latitude bins -- different for each year
 years <- sort(as.numeric(levels(as.factor(rca$Year))),decreasing=TRUE)
 get_n_bins <- function(yr) {a <- rca %>% dplyr::filter(Year==yr) %>% dplyr::select(Lat.low) %>% dim; return(a[1])}
 n.bins <- sapply(years,get_n_bins)
@@ -110,120 +180,49 @@ rca.new <- rca %>% mutate(LAT.bin=LAT.bins) %>% gather(Month,Close,Jan:Dec)
 close.lohi <- matrix(as.numeric(unlist(strsplit(rca.new$Close,"-"))), ncol=2, byrow=TRUE)
 rca.new <- rca.new %>% mutate(close.low=close.lohi[,1],close.high=close.lohi[,2])
 
-blake <- read.table("survey_points_with_attributes.txt",header=TRUE,sep=",")
-checkRCA <- dplyr::filter(blake,Fath_categ!="250+") # only could be in an RCA if depth < 250 fm
-checkRCA <- dplyr::filter(checkRCA,Year!=2002) # no RCA closures in 2002
+# RCA boundaries are defined by depth bins, in fathoms
+# Get depth bins for survey haul locations
+dat$fath <- dat$DEPTH*0.546806649 # get depth in fathoms, 0.546806649 fathoms/m
+fathom.categories <- c("0-50","50-60","60-75","75-100","100-150","150-200","200-250","250+") # fathom bins used to define RCAs
+dat$fath_categ <- cut(dat$fath, breaks=c(0,50,60,75,100,150,200,250,1000), labels=fathom.categories) # calculate fathom bins for haul locations
+dat$id <- 1:dim(dat)[1]
+dat$MONTH <- format(as.Date(dat$DATE),"%b")
 
-# test <- checkRCA[1:1000,]
-blake$Month <- format(as.Date(blake$Date),"%b")
-blake$inRCA = 0 # add "inRCA" covariate (0 if not, 1 if yes)
-blake$bin = 0
+# Don't need to check inRCA for depths >250 fm or in 2002
+checkRCA <- dplyr::filter(dat, fath_categ!="250+") # only could be in an RCA if depth < 250 fm
+checkRCA <- dplyr::filter(checkRCA, YEAR!=2002) # no RCA closures in 2002
+
+# Construct inRCA covariate by matching haul year/month/lat/depth to RCA limits
+#   takes about 1 min to do all locations
+dat$inRCA <- 0 # add "inRCA" covariate (0 if not, 1 if yes)
+dat$bin <- 0
 for(j in 1:nrow(checkRCA)){
-	i <- checkRCA$Master_id[j]
-	breaks <- c(55,rca %>% dplyr::filter(Year==blake$Year[i]) %>% dplyr::select(Lat.low) %>% unlist)
-	blake$bin[i] <- cut(blake$Lat[i],breaks=breaks,labels=1:(length(breaks)-1))
-	low <- rca.new %>% dplyr::filter(Year==blake$Year[i],Month==blake$Month[i],LAT.bin==blake$bin[i]) %>% dplyr::select(close.low)
-	high <- rca.new %>% dplyr::filter(Year==blake$Year[i],Month==blake$Month[i],LAT.bin==blake$bin[i]) %>% dplyr::select(close.high)
-	if(abs(blake$Ngdc_fath[i]) < high & abs(blake$Ngdc_fath[i]) > low) blake$inRCA[i] = 1
+	i <- checkRCA$id[j]
+	breaks <- c(55,rca %>% dplyr::filter(Year==dat$YEAR[i]) %>% dplyr::select(Lat.low) %>% unlist)
+	dat$bin[i] <- cut(dat$LAT[i],breaks=breaks,labels=1:(length(breaks)-1))
+	low <- rca.new %>% dplyr::filter(Year==dat$YEAR[i],Month==dat$MONTH[i],LAT.bin==dat$bin[i]) %>% dplyr::select(close.low)
+	high <- rca.new %>% dplyr::filter(Year==dat$YEAR[i],Month==dat$MONTH[i],LAT.bin==dat$bin[i]) %>% dplyr::select(close.high)
+	if(abs(dat$fath[i]) < high & abs(dat$fath[i]) > low) dat$inRCA[i] = 1
 }
-# # Check inRCA is working
-# pos <- filter(test,inRCA==1) %>% select(Year,Month,Lat,Ngdc_fath,bin)
-# rca.new %>% filter(Year==pos$Year[i],Month==pos$Month[i],LAT.bin==pos$bin[i])
+```
 
-inRCA_summary <- blake %>% group_by(Year) %>% summarise(count=n(),inRCA=sum(inRCA)) %>% mutate(propRCA=inRCA/count)
+### Standardize covariates
 
-pdf("/home/brian/Documents/Bycatch/WCGOP/figures/survey_inRCA.pdf")
-plot(inRCA_summary$Year,inRCA_summary$inRCA,type='o',xlab="Year",ylab="Number of tows in RCAs")
-dev.off()
+Now we transform, center (subtract mean), and create quadratic covariates. The original untransformed, uncentered data in ALL CAPS, e.g. DEPTH. The transformed, centered covariates ready to use in the models are in lower case, e.g. logDEPTH, logDEPTH2.
 
-pdf("/home/brian/Documents/Bycatch/WCGOP/figures/survey_propRCA.pdf")
-plot(inRCA_summary$Year,inRCA_summary$propRCA,type='o',xlab="Year",ylab="Percent of tows in RCAs")
-dev.off()
-
-# # Make sure blake$LAT == out$LAT etc.
-# identical(blake$Lat,dat$LAT)
-# identical(blake$Long,dat$LONG)
-# identical(blake$Year,dat$YEAR)
-
-# Copy covariates to 'out' and save workspace
-dat$inRCA <- blake$inRCA
-dat$ROCKDIST <- blake$Rockdist_m
-dat$ROCKSIZE <- blake$Rocksizeha
-
-# data are loaded and "cleaned" = all original variables are good to go, no NAs (not transformed, centered)
-save.image("survey_cleaned.RData")
-
-# Now "process" the data - transform, center, make ready for model fitting
-# Original untransformed, uncentered data in ALL CAPS, e.g. DEPTH
-# Transformed, ready to fit data in lower case, e.g. logDEPTH, logDEPTH2
-setwd("/home/brian/Documents/Bycatch/WCGOP/data")
-load("survey_cleaned.RData")
-
-# Log- or Sqrt-transform covariates on large scales
+```{r}
+# Log transform covariates on large scales
 dat$logDEPTH <- log(dat$DEPTH)
-dat$sqrtROCKDIST <- sqrt(dat$ROCKDIST)
-dat$logROCKSIZE <- log(dat$ROCKSIZE)
-dat$logEFFORT1 <- log(dat$EFFORT1)
-dat$logEFFORT2 <- log(dat$EFFORT2)
 
-# Center/de-mean each covariate (for easier model fitting)
-dat$sst <- dat$SST # - min(dat$SST)
-dat$bot_temp <- dat$BOT_TEMP
+# Center/de-mean each covariate
+dat$sst <- dat$SST
 demean <- function(vec){ return(vec - mean(vec))}
-dat[,c(8,9,18:24)] <- apply(dat[,c(8,9,18:24)],2,demean)
+dat[,c("logDEPTH","sst")] <- apply(dat[,c("logDEPTH","sst")],2,demean)
 
 # Create squared covariates
 dat$sst2 <- dat$sst^2
 dat$logDEPTH2 <- dat$logDEPTH^2
-dat$bot_temp2 <- dat$BOT_TEMP^2
 
 # Data are ready to fit
-# save(dat,file="survey_processed.RData")
-save(dat,file="survey_processed2.RData")
-
-# # Get survey points for Blake to make inRCA covariate
-# locations <- dplyr::select(dat,YEAR,DATE,LAT,LONG)
-# write.csv(locations,file="survey_points.csv",row.names=FALSE)
-
-# Standard-normalize covariates
-# boxcox_getlambda <- function(vec){
-# 	vec.lm <<- vec
-# 	out <- MASS::boxcox(lm(vec.lm~1),plotit=FALSE)
-# 	best <- out$x[which(out$y==max(out$y))]
-# 	return(best)
-# }
-# boxcox_transform <- function(vec,lambda){
-# 	out <- (vec^lambda - 1)/lambda
-# 	return(out)
-# }
-# apply(dat[,7:10],2,boxcox_getlambda)
-# new2 <- boxcox_transform(dat$EFFORT2,-3)
-# new1 <- boxcox_transform(dat$EFFORT1,-1.2)
-
-# tmp <- exp(rnorm(10))
-# out <- boxcox(lm(tmp~1))
-# range(out$x[out$y > max(out$y)-qchisq(0.95,1)/2])
-
-
-# pdf("rockdist_untransformed.pdf")
-# hist(dat$Rockdist_m)
-# dev.off()
-
-# pdf("rockdist_logplus1.pdf")
-# hist(log(dat$Rockdist_m + 1))
-# dev.off()
-
-# pdf("rockdist_sqrt.pdf")
-# hist(sqrt(dat$Rockdist_m))
-# dev.off()
-
-# library(dplyr)
-# over500 <- dat %>% dplyr::filter(Rockdist_m > 500) %>% select(Rockdist_m)
-# over50 <- dat %>% dplyr::filter(Rockdist_m > 50) %>% select(Rockdist_m)
-# pdf("rockdist_logcutoff.pdf")
-# hist(log(over50[,1]))
-# dev.off()
-
-# Add DEPTH2 and SST2 covariates (have to re-mean first)
-
-
+save(dat, file="/home/brian/Documents/Bycatch/WCGOP/data/wcann_processed.RData")
+```
