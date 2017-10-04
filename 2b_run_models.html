@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Brian Stock" />
+
+
+<title>Run spatiotemporal models for fisheries bycatch prediction</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Run spatiotemporal models for fisheries bycatch prediction</h1>
+<h4 class="author"><em>Brian Stock</em></h4>
+<h4 class="date"><em>Sept 29, 2017</em></h4>
+
+
+
+<p>This vignette demonstrates how we ran the spatiotemporal models in:</p>
+<blockquote>
+<p>Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. “Random forests outperform other species distribution models for spatiotemporal fisheries bycatch prediction.”</p>
+</blockquote>
+<p>We assume you either 1) have already seen <a href="https://rawgit.com/brianstock/spatial-bycatch/master/2a_process_survey.html"><code>2a_process_survey</code></a>, or 2) are not interested in how the data were processed/prepared. Either way, from this point we continue by using the saved output of <code>2a_process_survey</code>: <code>wcann_processed.RData</code>.</p>
+<p><em>Note:</em> Because the fisheries observer datasets we used are confidential (<a href="https://www.nwfsc.noaa.gov/research/divisions/fram/observation/data_collection/manuals/2017%20WCGOP%20Training%20Manual%20Final%20website%20copy.pdf">WCGOP</a>, <a href="http://www.nmfs.noaa.gov/pr/interactions/fkwtrt/meeting1/handouts/observer_manual.pdf">HILL</a>), here we perform the same analyses using the publically available <a href="https://www.nwfsc.noaa.gov/research/divisions/fram/groundfish/bottom_trawl.cfm">West Coast Groundfish Trawl Survey</a>.</p>
+<div id="load-data" class="section level3">
+<h3>Load data</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># load the data from 2a_process_survey</span>
+<span class="kw">load</span>(<span class="st">&quot;/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/wcann_processed.RData&quot;</span>)
+<span class="kw">head</span>(dat)</code></pre></div>
+<pre><code>##          HAUL_ID YEAR       DATE      LAT       LON    DEPTH   TOTAL DBRK
+## 359  2.00303e+11 2003 2003-06-24 46.09611 -124.7761 564.9317 123.176 0.00
+## 6671 2.00303e+11 2003 2003-06-24 46.02472 -124.7389 310.0056 304.980 1.81
+## 6925 2.00303e+11 2003 2003-06-24 46.15667 -124.5156 140.7280 501.270 1.35
+## 6926 2.00303e+11 2003 2003-06-24 46.50389 -124.7325 606.3237  98.910 0.00
+## 7216 2.00303e+11 2003 2003-06-24 46.75500 -124.5428 107.4615 714.960 0.00
+## 182  2.00303e+11 2003 2003-06-25 47.60194 -124.8156 106.0853 573.350 0.10
+##      PHLB YEYE      DAY YEYE_01 PHLB_01 DBRK_01         SST      fath
+## 359     0    0 -43.1275       0       0       0 -0.01410765 308.90841
+## 6671    0    0 -43.1275       0       0       1  0.04703642 169.51312
+## 6925   18    0 -43.1275       0       1       1 -0.06884963  76.95101
+## 6926    0    0 -43.1275       0       0       0 -0.38681021 331.54183
+## 7216    0    0 -43.1275       0       0       0 -0.61593420  58.76066
+## 182     0    0 -42.1275       0       0       1 -1.53736698  58.00815
+##      fath_categ id MONTH inRCA bin   logDEPTH        sst       sst2
+## 359        250+  1   Jun     0   0  0.7985194  0.8565284 0.73364093
+## 6671    150-200  2   Jun     1   4  0.1984049  0.9176725 0.84212280
+## 6925     75-100  3   Jun     1   4 -0.5913565  0.8017864 0.64286150
+## 6926       250+  4   Jun     0   0  0.8692286  0.4838259 0.23408747
+## 7216      50-60  5   Jun     1   4 -0.8610528  0.2547019 0.06487305
+## 182       50-60  6   Jun     1   4 -0.8739419 -0.6667309 0.44453010
+##       logDEPTH2
+## 359  0.63763326
+## 6671 0.03936452
+## 6925 0.34970247
+## 6926 0.75555833
+## 7216 0.74141188
+## 182  0.76377450</code></pre>
+</div>
+<div id="setup-stratified-10-fold-cross-validation" class="section level3">
+<h3>Setup stratified 10-fold cross validation</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(caret)
+<span class="co"># Use caret package to do stratified k-fold cross validation</span>
+ind.DBRK &lt;-<span class="st"> </span><span class="kw">createFolds</span>(dat$DBRK_01, <span class="dt">k=</span><span class="dv">10</span>)
+ind.PHLB &lt;-<span class="st"> </span><span class="kw">createFolds</span>(dat$PHLB_01, <span class="dt">k=</span><span class="dv">10</span>)
+ind.YEYE &lt;-<span class="st"> </span><span class="kw">createFolds</span>(dat$YEYE_01, <span class="dt">k=</span><span class="dv">10</span>)</code></pre></div>
+</div>
+<div id="model-descriptions" class="section level3">
+<h3>Model descriptions</h3>
+<p><span class="math inline">\(Y\)</span> is the response:</p>
+<ul>
+<li>0/1 for the binomial component of delta model</li>
+<li>catch (kg) for the positive component of delta model</li>
+</ul>
+<p><span class="math inline">\(Y_j\)</span> denotes response in year <span class="math inline">\(j\)</span> for models that fit spatial terms by year.</p>
+<ol style="list-style-type: decimal">
+<li>GLM</li>
+</ol>
+<blockquote>
+<p><span class="math inline">\(Y\)</span> ~ logDEPTH + logDEPTH<span class="math inline">\(^2\)</span> + sst + sst<span class="math inline">\(^2\)</span> + inRCA + DAY + YEAR</p>
+</blockquote>
+<ol start="2" style="list-style-type: decimal">
+<li>GAM CONSTANT</li>
+</ol>
+<blockquote>
+<p><span class="math inline">\(Y\)</span> ~ logDEPTH + logDEPTH<span class="math inline">\(^2\)</span> + sst + sst<span class="math inline">\(^2\)</span> + inRCA + DAY + YEAR + s(LAT, LON)</p>
+</blockquote>
+<ol start="3" style="list-style-type: decimal">
+<li>GAM IID</li>
+</ol>
+<blockquote>
+<p><span class="math inline">\(Y_j\)</span> ~ logDEPTH + logDEPTH<span class="math inline">\(^2\)</span> + sst + sst<span class="math inline">\(^2\)</span> + inRCA + DAY + s(LAT, LON)<span class="math inline">\(_j\)</span></p>
+</blockquote>
+<ol start="4" style="list-style-type: decimal">
+<li>GMRF CONSTANT</li>
+</ol>
+<blockquote>
+<p><span class="math inline">\(Y\)</span> ~ logDEPTH + logDEPTH<span class="math inline">\(^2\)</span> + sst + sst<span class="math inline">\(^2\)</span> + inRCA + DAY + YEAR + <span class="math inline">\(MVN(0, Q^{-1})\)</span></p>
+</blockquote>
+<ol start="5" style="list-style-type: decimal">
+<li>GMRF EXCHANGEABLE</li>
+</ol>
+<blockquote>
+<p><span class="math inline">\(Y_j\)</span> ~ logDEPTH + logDEPTH<span class="math inline">\(^2\)</span> + sst + sst<span class="math inline">\(^2\)</span> + inRCA + DAY + YEAR + <span class="math inline">\(MVN(0, Q_j^{-1})\)</span></p>
+</blockquote>
+<ol start="6" style="list-style-type: decimal">
+<li>Random Forest (RF)</li>
+</ol>
+<blockquote>
+<p><span class="math inline">\(Y\)</span> ~ logDEPTH, sst, inRCA, DAY, YEAR, LAT, LON</p>
+</blockquote>
+</div>
+<div id="run-the-models" class="section level3">
+<h3>Run the models</h3>
+<p>species &lt;- c(“DBRK”,“PHLB”,“YEYE”) n.species &lt;- length(species)</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

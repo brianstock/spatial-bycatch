@@ -12,7 +12,7 @@ Because the fisheries observer datasets we used are confidential ([WCGOP](https:
 
 ### 1) Simple
 
-##### 1_simple.Rmd
+##### 1_simple
 
 Get straight to running the models, starting with a prepared `.RData` file:
   - skips data processing and cross validation
@@ -25,15 +25,15 @@ Get straight to running the models, starting with a prepared `.RData` file:
   - 3 species
   - all years
   
-##### 2a_process_survey.Rmd
+##### [2a_process_survey](https://rawgit.com/brianstock/spatial-bycatch/master/2a_process_survey.html)
 
 Details how we downloaded and processed the data, including preparing the environmental covariates. We save the output of this script as `wcann_processed.RData`, so if you are not interested in this step, you can skip ahead to run the spatial models.
 
-##### 2b_run_models.Rmd
+##### 2b_run_models
 
 Sets up and runs 10-fold cross validation for all spatial models. *Note that in our manuscript we used 5-fold cross validation repeated 10x. We use 1x 10-fold CV here to save model run time.*
 
-##### 2c_output.Rmd
+##### 2c_output
 
 Creates output from model runs, replicating the figures from our analysis:
   1. Maps of effort and catch (visualize the raw data)

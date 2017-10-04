@@ -134,16 +134,8 @@ dat$YEAR &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span 
 dat$TOTAL &lt;-<span class="st"> </span>HAUL$vertebrate_weight_kg
 dat$TOTAL[<span class="kw">which</span>(<span class="kw">is.na</span>(dat$TOTAL))] &lt;-<span class="st"> </span><span class="dv">0</span> <span class="co"># replace NA with 0</span></code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Add catch of each species by haul (takes a couple min)</span>
-<span class="kw">library</span>(dplyr)</code></pre></div>
-<pre><code>## 
-## Attaching package: 'dplyr'</code></pre>
-<pre><code>## The following objects are masked from 'package:stats':
-## 
-##     filter, lag</code></pre>
-<pre><code>## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat$YEYE &lt;-<span class="st"> </span>dat$DBRK &lt;-<span class="st"> </span>dat$PHLB &lt;-<span class="st"> </span><span class="dv">0</span>
+<span class="kw">library</span>(dplyr)
+dat$YEYE &lt;-<span class="st"> </span>dat$DBRK &lt;-<span class="st"> </span>dat$PHLB &lt;-<span class="st"> </span><span class="dv">0</span>
 for(i in <span class="dv">1</span>:n.hauls){
   <span class="co"># get all species caught in the ith haul</span>
     cur_haul &lt;-<span class="st"> </span><span class="kw">filter</span>(CATCH, trawl_id==dat$HAUL_ID[i])
@@ -152,7 +144,14 @@ for(i in <span class="dv">1</span>:n.hauls){
     if(<span class="st">&quot;Pacific halibut&quot;</span> %in%<span class="st"> </span>cur_haul$common_name) dat$PHLB[i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dplyr::<span class="kw">filter</span>(cur_haul,common_name==<span class="st">&quot;Pacific halibut&quot;</span>) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(total_catch_wt_kg))
 }
 <span class="co"># Order by date</span>
-dat &lt;-<span class="st"> </span>dat[<span class="kw">order</span>(dat$DATE),]</code></pre></div>
+dat &lt;-<span class="st"> </span>dat[<span class="kw">order</span>(dat$DATE),]
+<span class="co"># Add DAY covariate: day of the year</span>
+dat$DAY &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dat$DATE -<span class="st"> </span><span class="kw">as.Date</span>(<span class="kw">paste0</span>(dat$YEAR,<span class="st">&quot;-01-01&quot;</span>)))
+<span class="co"># Add binomial catch columns</span>
+dat$DBRK_01 &lt;-<span class="st"> </span>dat$PHLB_01 &lt;-<span class="st"> </span>dat$YEYE_01 &lt;-<span class="st"> </span><span class="dv">0</span>
+dat$DBRK_01[<span class="kw">which</span>(dat$DBRK&gt;<span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span>
+dat$PHLB_01[<span class="kw">which</span>(dat$PHLB&gt;<span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span>
+dat$YEYE_01[<span class="kw">which</span>(dat$YEYE&gt;<span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span></code></pre></div>
 </div>
 <div id="add-sst-covariate" class="section level3">
 <h3>Add SST covariate</h3>
@@ -273,11 +272,18 @@ dat$logDEPTH &lt;-<span class="st"> </span><span class="kw">log</span>(dat$DEPTH
 <span class="co"># Center/de-mean each covariate</span>
 dat$sst &lt;-<span class="st"> </span>dat$SST
 demean &lt;-<span class="st"> </span>function(vec){ <span class="kw">return</span>(vec -<span class="st"> </span><span class="kw">mean</span>(vec))}
-dat[,<span class="kw">c</span>(<span class="st">&quot;logDEPTH&quot;</span>,<span class="st">&quot;sst&quot;</span>)] &lt;-<span class="st"> </span><span class="kw">apply</span>(dat[,<span class="kw">c</span>(<span class="st">&quot;logDEPTH&quot;</span>,<span class="st">&quot;sst&quot;</span>)],<span class="dv">2</span>,demean)
+dat[,<span class="kw">c</span>(<span class="st">&quot;DAY&quot;</span>,<span class="st">&quot;logDEPTH&quot;</span>,<span class="st">&quot;sst&quot;</span>)] &lt;-<span class="st"> </span><span class="kw">apply</span>(dat[,<span class="kw">c</span>(<span class="st">&quot;DAY&quot;</span>,<span class="st">&quot;logDEPTH&quot;</span>,<span class="st">&quot;sst&quot;</span>)],<span class="dv">2</span>,demean)
 
 <span class="co"># Create squared covariates</span>
 dat$sst2 &lt;-<span class="st"> </span>dat$sst^<span class="dv">2</span>
 dat$logDEPTH2 &lt;-<span class="st"> </span>dat$logDEPTH^<span class="dv">2</span>
+
+<span class="co"># Turn categorical variables into factors</span>
+dat$YEAR &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$YEAR)
+dat$DBRK_01 &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$DBRK_01)
+dat$PHLB_01 &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$PHLB_01)
+dat$YEYE_01 &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$YEYE_01)
+dat$inRCA &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$inRCA)
 
 <span class="co"># Data are ready to fit</span>
 <span class="kw">save</span>(dat, <span class="dt">file=</span><span class="st">&quot;/home/brian/Documents/Bycatch/WCGOP/data/wcann_processed.RData&quot;</span>)</code></pre></div>

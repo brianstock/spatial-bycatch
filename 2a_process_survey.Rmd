@@ -81,7 +81,7 @@ dat$TOTAL <- HAUL$vertebrate_weight_kg
 dat$TOTAL[which(is.na(dat$TOTAL))] <- 0 # replace NA with 0
 ```
 
-```{r}
+```{r message=FALSE}
 # Add catch of each species by haul (takes a couple min)
 library(dplyr)
 dat$YEYE <- dat$DBRK <- dat$PHLB <- 0
@@ -94,6 +94,13 @@ for(i in 1:n.hauls){
 }
 # Order by date
 dat <- dat[order(dat$DATE),]
+# Add DAY covariate: day of the year
+dat$DAY <- as.numeric(dat$DATE - as.Date(paste0(dat$YEAR,"-01-01")))
+# Add binomial catch columns
+dat$DBRK_01 <- dat$PHLB_01 <- dat$YEYE_01 <- 0
+dat$DBRK_01[which(dat$DBRK>0)] <- 1
+dat$PHLB_01[which(dat$PHLB>0)] <- 1
+dat$YEYE_01[which(dat$YEYE>0)] <- 1
 ```
 
 ### Add SST covariate
@@ -101,7 +108,7 @@ dat <- dat[order(dat$DATE),]
   
 Download daily sea surface temperature anomalies (.nc files) for 2003-2013 from: https://www.esrl.noaa.gov/psd/data/gridded/data.noaa.oisst.v2.highres.html 
 
-```{r eval=TRUE, echo=TRUE, results='hide'}
+```{r eval=TRUE, echo=TRUE, message=FALSE, results='hide'}
 # function to get SST daily anomaly at the DATE/LON/LAT for each haul
 #   uses bilinear interpolation from nearest gridpoints
 library(ncdf4)
@@ -164,7 +171,7 @@ dat <- dat[-which(is.na(dat$SST)),]
 
 *Note:* The Rockfish Conservation Area (RCA) boundaries have changed by month, year, latitude, and depth. We have prepared `rca_boundaries.csv` using historical RCA boundaries. For more details, see the [RCA webpage](http://www.westcoast.fisheries.noaa.gov/fisheries/management/groundfish_closures/rockfish_areas.html).
 
-```{r}
+```{r message=FALSE}
 library(tidyr)
 
 # Get historical RCA boundary limits
@@ -217,11 +224,18 @@ dat$logDEPTH <- log(dat$DEPTH)
 # Center/de-mean each covariate
 dat$sst <- dat$SST
 demean <- function(vec){ return(vec - mean(vec))}
-dat[,c("logDEPTH","sst")] <- apply(dat[,c("logDEPTH","sst")],2,demean)
+dat[,c("DAY","logDEPTH","sst")] <- apply(dat[,c("DAY","logDEPTH","sst")],2,demean)
 
 # Create squared covariates
 dat$sst2 <- dat$sst^2
 dat$logDEPTH2 <- dat$logDEPTH^2
+
+# Turn categorical variables into factors
+dat$YEAR <- as.factor(dat$YEAR)
+dat$DBRK_01 <- as.factor(dat$DBRK_01)
+dat$PHLB_01 <- as.factor(dat$PHLB_01)
+dat$YEYE_01 <- as.factor(dat$YEYE_01)
+dat$inRCA <- as.factor(dat$inRCA)
 
 # Data are ready to fit
 save(dat, file="/home/brian/Documents/Bycatch/WCGOP/data/wcann_processed.RData")
