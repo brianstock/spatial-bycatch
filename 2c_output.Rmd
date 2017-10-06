@@ -1,0 +1,433 @@
+---
+title: "Step 3: Create figures from model output"
+author: "Brian Stock"
+date: "Oct 3, 2017"
+output: html_vignette
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc} 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch')
+```
+
+This vignette recreates figures from model output in:
+
+> Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. "Random forests outperform other species distribution models for spatiotemporal fisheries bycatch prediction."
+
+  * [Fig. 1: Maps of effort and catch (raw data)](#fig1)
+  * [Fig. 2: Compare model performance with boxplots of AUC and RMSE](#fig2)
+  * [Fig. 3: Compare the reduction in bycatch-to-target ratio](#fig3)
+  * [Fig. 4: Maps of predicted density (mean) and variablity (log CV)](#fig4)
+  * [Fig. 5: Visualize covariate effects for GMRF and RF](#fig5)
+  * [Fig. 6: Map the GMRF spatial random field by year (one for each year, only 1 species)](#fig6)
+  * [Fig. S3: Map the GMRF spatial random field (one across all years, for each of 3 species)](#figS3)
+
+We assume you either 1) have already seen [`2a_process_survey`](https://rawgit.com/brianstock/spatial-bycatch/master/2a_process_survey.html) and [`2b_run_models`](https://rawgit.com/brianstock/spatial-bycatch/master/2b_run_models.html), or 2) are not interested in how the data were processed/prepared or running the models yourself. Either way, from this point we continue by using the saved output of `2b_run_models`: `wcann_models_finished.RData`.
+
+*Note:* Because the fisheries observer datasets we used are confidential ([WCGOP](https://www.nwfsc.noaa.gov/research/divisions/fram/observation/data_collection/manuals/2017%20WCGOP%20Training%20Manual%20Final%20website%20copy.pdf), [HILL](http://www.nmfs.noaa.gov/pr/interactions/fkwtrt/meeting1/handouts/observer_manual.pdf)), here we perform the same analyses using the publically available [West Coast Groundfish Trawl Survey](https://www.nwfsc.noaa.gov/research/divisions/fram/groundfish/bottom_trawl.cfm).
+
+### Load data and packages
+
+```{r}
+# load the data from 2a_process_survey
+load("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/wcann_processed.RData")
+head(dat)
+```
+
+```{r message=FALSE}
+library(KernSmooth)
+library(fields)
+library(PBSmapping)
+library(RColorBrewer)
+library(INLA)
+library(sp)
+```
+
+```{r}
+# This helper function creates a color scale for use with the image()
+# function. Input parameters should be consistent with those
+# used in the corresponding image plot. The "axis.pos" argument
+# defines the side of the axis. The "add.axis" argument defines
+# whether the axis is added (default: TRUE)or not (FALSE).
+image.scale <- function(z, zlim, col = heat.colors(12),
+breaks, axis.pos=1, add.axis=TRUE, ...){
+ if(!missing(breaks)){
+  if(length(breaks) != (length(col)+1)){stop("must have one more break than colour")}
+ }
+ if(missing(breaks) & !missing(zlim)){
+  breaks <- seq(zlim[1], zlim[2], length.out=(length(col)+1)) 
+ }
+ if(missing(breaks) & missing(zlim)){
+  zlim <- range(z, na.rm=TRUE)
+  zlim[2] <- zlim[2]+c(zlim[2]-zlim[1])*(1E-3)#adds a bit to the range in both directions
+  zlim[1] <- zlim[1]-c(zlim[2]-zlim[1])*(1E-3)
+  breaks <- seq(zlim[1], zlim[2], length.out=(length(col)+1))
+ }
+ poly <- vector(mode="list", length(col))
+ for(i in seq(poly)){
+  poly[[i]] <- c(breaks[i], breaks[i+1], breaks[i+1], breaks[i])
+ }
+ if(axis.pos %in% c(1,3)){ylim<-c(0,1); xlim<-range(breaks)}
+ if(axis.pos %in% c(2,4)){ylim<-range(breaks); xlim<-c(0,1)}
+ plot(1,1,t="n",ylim=ylim, xlim=xlim, axes=FALSE, xlab="", ylab="", xaxs="i", yaxs="i", ...)  
+ for(i in seq(poly)){
+  if(axis.pos %in% c(1,3)){
+   polygon(poly[[i]], c(0,0,1,1), col=col[i], border=NA)
+  }
+  if(axis.pos %in% c(2,4)){
+   polygon(c(0,0,1,1), poly[[i]], col=col[i], border=NA)
+  }
+ }
+ box()
+ if(add.axis) {axis(axis.pos)}
+}
+```
+
+### Fig. 1 - Maps of effort and catch (visualize the raw data) {#fig1}
+
+![**Figure 1. Effort and target catch density in the West Coast bottom trawl survey from 2003 to 2012.**     
+*Left)* Bivariate kernel density estimate showing smoothed density of fishing effort (7,161 haul locations, `bkde2D` function in R package `KernSmooth`). *Right)* Thin plate spline surface estimating the average density of target catch at a given location, log(pounds groundfish), fit using the `Tps` function from the R package `fields`. Note that the map of total/expected catch would be produced by multiplying effort and target catch densities, just as the binomial and positive components are multiplied in the delta model.](figures/fig1.png){width=500px}
+
+```{r fig1, eval=FALSE}
+# ---------------------------------------------------------------------------
+# Left panel: effort (density of survey trawling activity)
+# ---------------------------------------------------------------------------
+
+# Get map boundaries
+minX = min(dat$LON)
+maxX = max(dat$LON)
+minY = min(dat$LAT)
+maxY = max(dat$LAT)
+
+# fit 2d kernel density estimate (from KernSmooth package)
+#   takes ~1 minute
+fit <- bkde2D(x=cbind(dat$LON,dat$LAT), 
+	bandwidth=c(0.1,0.1),
+	gridsize=c(2000,12000),
+	range.x=list(c(minX,maxX),c(minY,maxY)), truncate=TRUE)
+
+# load coastline from PBSmapping package
+data(nepacLL) 
+attr(nepacLL,"zone")="10" # tell it we're in zone 10
+
+# define legend colors
+rf <- colorRampPalette(rev(brewer.pal(11,'Spectral')))
+spec200 <- rf(200)
+
+# define 2-panel dimensions
+dev.new(width=7.25, height=7)
+layout(matrix(c(1,2), nrow=1, ncol=2), widths=c(3.75,3.5), heights=c(7))
+
+# make map of U.S. West Coast
+plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),
+   col='grey',main="",plt = c(0.03, 0.97, 0.08, 0.95),
+   cex.axis=1.5, cex.lab=1.5)
+title("WCANN Effort",line=1)
+
+# add 2d kernel density surface
+image(fit$x1,fit$x2,fit$fhat, col = spec200, add=T)
+
+# add back map of U.S. West Coast (on top)
+lev = levels(as.factor(nepacLL$PID))
+for(i in 1:length(lev)) {
+   indx = which(nepacLL$PID == lev[i])
+   polygon(nepacLL$X[indx], nepacLL$Y[indx], col = "grey")
+}
+
+# add legend color scale
+minP <- min(fit$fhat, na.rm=T)
+maxP <- max(fit$fhat, na.rm=T)
+minP <- 0
+maxP <- 1
+image.plot(smallplot=c(.85,.88,0.08,0.95), col=spec200,
+           zlim=c(round(minP,1),round(maxP,1)), legend.only=TRUE, 
+           legend.shrink=0.3, lab.break=round(seq(minP,maxP,length.out=4),1))
+
+# ---------------------------------------------------------------------------
+# Right panel: total catch (all species)
+# ---------------------------------------------------------------------------
+
+# fields::Tps is memory intensive, try sampling 1/2 of locations
+frac <- 2
+n.dat <- dim(dat)[1]
+plot.id <- sample(x=1:n.dat, size=floor(n.dat/frac), replace=F)
+plot.id <- plot.id[which(dat$TOTAL[plot.id]>0)]
+
+# fit spline on log(TOTAL)
+#   takes ~5 minutes 447
+TOTAL.spline.log <- Tps(data.frame(dat$LON[plot.id], dat$LAT[plot.id]), log(dat$TOTAL[plot.id]))
+new.grid.log <- predictSurface(TOTAL.spline.log, nx = 500, ny = 3000)
+
+# the lower half of the scale is unused because it's covered by land
+# turn onLand points to NA so the scale covers full range over ocean points
+new.grid.log$onLand = rep(0,length(new.grid.log$z))
+new.grid.log$coords <- as.matrix(expand.grid(new.grid.log$x, new.grid.log$y))
+polygons = unique(nepacLL$PID)
+for(i in 1:length(polygons)) {
+ indx = which(nepacLL$PID == polygons[i])
+ new.grid.log$onLand = new.grid.log$onLand +
+   point.in.polygon(new.grid.log$coords[,1], new.grid.log$coords[,2],
+                    nepacLL$X[indx], nepacLL$Y[indx], mode.checked=FALSE)
+}
+new.grid.log$z[which(new.grid.log$onLand > 0)] <- NA
+
+# get min and max z values to set color scale bar
+minP <- min(new.grid.log$z,na.rm=TRUE)
+maxP <- max(new.grid.log$z,na.rm=TRUE)
+
+# plot the map
+plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),
+   col='grey',main="",plt = c(0, 0.97, 0.08, 0.95),
+   cex.axis=1.5, cex.lab=1.5, yaxt = "n", ylab="")
+title("WCANN Catch Density")
+rect(minX, minY, maxX, maxY, density = 20, col='grey')
+rect(minX, minY, maxX, maxY, density = 20, col='grey', angle=135)
+
+# add spline surface
+image(new.grid.log,col=spec200,add=T, breaks = seq(minP,maxP,length.out=201))
+
+# add back coastline on top
+lev = levels(as.factor(nepacLL$PID))
+for(i in 1:length(lev)) {
+   indx = which(nepacLL$PID == lev[i])
+   polygon(nepacLL$X[indx], nepacLL$Y[indx], col = "grey")
+}
+
+# add color scale bar
+image.plot(smallplot=c(.84,.87,0.08,0.95), col=spec200,
+           zlim=c(round(minP,2),round(maxP,2)), 
+           legend.only=TRUE,legend.shrink=0.3)
+
+# print to png
+dev.print(png,"/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig1.png",
+          res=400, height=7, width=7.25, units="in")
+
+# save objects for faster plotting in future
+save.image("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig1.RData")
+```
+
+### Fig. 2: Compare model performance with boxplots of AUC and RMSE {#fig2}
+
+**Figure 2. Predictive performance of the binomial and positive components of the delta model in 10-fold cross-validation on the test data:** a) AUC for the binomial models, and b) normalized RMSE for the positive models. Better performance = higher AUC, lower RMSE. Species abbreviations: DBRK = darkblotched rockfish, PHLB = Pacific halibut, YEYE = yelloweye rockfish. Only the best submodel (e.g. CONSTANT, IID, EXCHANGEABLE) within each model class for each species is shown here.
+
+
+```{r fig2, eval=FALSE}
+```
+
+### Fig. 3: Compare the reduction in bycatch-to-target ratio {#fig3}
+
+![**Figure 3. Bycatch-to-target ratio achieved by using the binomial component of the delta model to predict and remove fishing sets in the test data, relative to 0% fishing removed.** Lines show median of 10-fold cross-validation runs for each model class. Shaded areas are bootstrapped 95% confidence intervals for the median. As in Figure 2, only the best submodel within each model class for each species is shown here. *Note: Confidence intervals are wider here than in manuscript because we only ran 10-fold CV instead of 5-fold CV repeated 10x.*](figures/fig3_all.png){width=700px}
+
+```{r fig3, eval=FALSE}
+  species.labs <- c("DBRK","PHLB","YEYE")
+  n.sp <- length(species.labs)
+  model.labs <- c("GLM","GAM","INLA","RF") # only use GAM-CONSTANT, INLA-IID, and RF-BASE
+  best.mod <- c(1,2,5,6) # same best models for both species
+
+  f.rem <- seq(from=0,by=.005,to=.1) # 1%, 2%, 5%, 10% fishing removed
+  n.f <- length(f.rem)
+
+  n.mod <- length(model.labs)
+  n.rep <- 10 # number of cross-validation folds
+  # for sp, predict f% test locations using model, test data rep 
+  bycatch.rem <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep))
+  # target catch REMOVED from test dataset by predicting f% locations
+  target.rem <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+  # how much bycatch sp LEFT after removing f% tows?
+  bycatch.left <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+  # how much target catch LEFT after removing f% tows?
+  target.left <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+  # total bycatch of sp in test data rep (all locations)
+  bycatch <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+  # target bycatch in test data rep (all locations)
+  target <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+  # % reduction in bycatch:target ratio
+  ratio.reduction <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+  # % reduction in bycatch
+  bycatch.reduction <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+  # % reduction in target
+  target.reduction <- array(NA,dim=c(n.f,n.sp,n.mod,n.rep)) 
+
+  # for all species and models, load predicted bycatch probabilities
+  for(sp in 1:n.sp){
+    for(rep in 1:n.rep){
+      load(paste0("/home/brian/Documents/Bycatch/figure_data/fits.bin_",sp,"_",rep,".RData"))
+      dat.test <- dat[d[[4]]$test.id, ]
+      target[,sp,,rep] <- sum(dat.test$TOTAL)
+      bycatch[,sp,,rep] <- sum(dat.test[,species.labs[sp]])
+
+      # for each model:
+      #   1. get cutoff points for each level of fishing remaining
+      #   2. find hauls with predicted bycatch probabilities above cutoff
+      #   3. add up bycatch and target catch of these 'removed' hauls
+      for(m in 1:n.mod){
+        cuts <- quantile(d[[best.mod[m]]][[3]],probs=1-f.rem) 
+        for(f in 1:n.f){
+          rem <- d[[best.mod[m]]][[3]] > cuts[f]
+          bycatch.rem[f,sp,m,rep] <- sum(dat.test[rem,species.labs[sp]])
+          target.rem[f,sp,m,rep] <- sum(dat.test[rem,"TOTAL"])
+        }          
+      }
+    }
+  }
+
+  # calculate reduction in bycatch-to-target ratio
+  bycatch.left <- bycatch - bycatch.rem
+  target.left <- target - target.rem
+  bycatch.reduction <- bycatch.left/bycatch
+  target.reduction <- target.left/target
+  ratio.reduction <- (bycatch.left/target.left)/(bycatch/target)
+
+  # put in long data format
+  ratio.df <- plyr::adply(ratio.reduction,1:n.mod)
+  names(ratio.df) <- c("f","Species","Model","Rep","ratio.red")
+  levels(ratio.df$f) <- f.rem
+  levels(ratio.df$Species) <- species.labs
+  ratio.df$f <- as.numeric(as.character(ratio.df$f))
+
+  # https://stackoverflow.com/questions/14255533/pretty-ticks-for-log-normal-scale-using-ggplot2-dynamic-not-manual
+  base_breaks <- function(){
+      function(x) {
+          axisTicks(log10(range(x, na.rm = TRUE)), log = TRUE, n = 5)[2:5]
+      }
+  }
+
+  # Get bootstrap median with CI, https://rpubs.com/dgolicher/median_boot
+  median_cl_boot <- function(x, conf = 0.95) {
+      lconf <- (1 - conf)/2
+      uconf <- 1 - lconf
+      require(boot)
+      bmedian <- function(x, ind) median(x[ind])
+      bt <- boot(x, bmedian, 1000)
+      bb <- boot.ci(bt, type = "perc")
+      data.frame(y = median(x), 
+                 ymin = quantile(bt$t, lconf), 
+                 ymax = quantile(bt$t, uconf))
+  }
+
+  # Figure S4 (panel plot all species)
+  library(ggplot2)
+  png("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/figS4_ratio_reduction_allsp.png",
+      units = 'in',height=4,width=7,res=300)
+  print(
+    ggplot(ratio.df, aes(x = f, y = ratio.red, colour=Model, fill=Model,group=Model)) +
+    stat_summary(fun.data = median_cl_boot, alpha=.5, color=NA,geom="ribbon") +
+    stat_summary(fun.y=median, geom="line",size=1.5, na.rm = TRUE) +  
+    theme_bw() +
+    facet_wrap(~Species) +
+    scale_x_continuous(labels=scales::percent, breaks=c(.01,.05,.1)) +  
+    xlab("Fishing effort removed") +
+    ylab("Relative bycatch:target") +
+    scale_colour_manual(name="Model",labels=c("GLM","GAM","GMRF","RF"),
+                        values=c("grey","#E69F00", "#56B4E9","black")) +
+    scale_fill_manual(name="Model",labels=c("GLM","GAM","GMRF","RF"),
+                      values=c("grey","#E69F00", "#56B4E9","black")) +  
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), panel.background = element_blank(),
+          axis.line = element_line(colour = "black"), axis.title=element_text(size=14),
+          axis.text=element_text(size=12), legend.text=element_text(size=12),
+          legend.title=element_blank(), legend.position = c(0.88, 0.9),
+          legend.key.width = unit(0.5, "in")) 
+  )
+  dev.off()
+
+  # Figure 3 (average across all species for each model)
+  png("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig3_ratio_reduction_avg.png",
+      units = 'in',height=7,width=7,res=300)
+  print(
+    ggplot(ratio.df, aes(x = f, y = ratio.red, colour=Model, fill=Model,group=Model)) +
+    stat_summary(fun.data = median_cl_boot, alpha=.5, color=NA,geom="ribbon") +
+    stat_summary(fun.y=median, geom="line",size=1.5, na.rm = TRUE) +
+    theme_bw() +
+    scale_x_continuous(labels=scales::percent, breaks=c(0,.025,.05,.075,.1)) +  
+    coord_cartesian(ylim = c(0.5,1)) +
+    # scale_y_continuous(labels=scales::percent) +
+    xlab("Fishing effort removed") +
+    ylab("Relative bycatch:target") +
+    scale_colour_manual(name="Model",labels=c("GLM","GAM","GMRF","RF"), 
+                        values=c("grey","#E69F00", "#56B4E9","black")) +
+    scale_fill_manual(name="Model",labels=c("GLM","GAM","GMRF","RF"),
+                      values=c("grey","#E69F00", "#56B4E9","black")) +
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), panel.background = element_blank(),
+          axis.line = element_line(colour = "black"), axis.title=element_text(size=14),
+          axis.text=element_text(size=12), legend.text=element_text(size=12),
+          legend.title=element_blank(), legend.position = c(0.88, 0.9), 
+          legend.key.width = unit(0.5, "in")) 
+  )
+  dev.off()
+```
+
+### Fig. 4: Maps of predicted density (mean) and variablity (log CV) {#fig4}
+
+**Figure 4. Maps of darkblotched rockfish catch predictions with uncertainty for the West Coast bottom trawl survey in 2012 from the GMRF and random forest (RF) models (binomial x positive = expected).** *a)* Log mean expected bycatch from the GMRF-CONSTANT model. *b)* Log variance of expected bycatch from the GMRF-CONSTANT model. *c)* Log mean expected bycatch from the RF-BASE model. *d)* Log variance of expected bycatch from the RF-BASE model. Maps created by both models show artifacts of their construction: the mesh triangulation is evident in the GMRF variance map (b), and the sharp gradients in the RF mean (c) and variance (d) maps are a consequence of RF trees splitting on latitude and longitude.
+
+The code to produce Figure 2 is quite long:
+
+```{r fig2, eval=FALSE}
+```
+
+### Fig. 5: Visualize covariate effects for GMRF and RF {#fig5}
+
+**Figure 5. Covariate effects estimated by the GMRF and random forest (RF) models for darkblotched rockfish.** GMRF and RF estimate a positive effect of PredOcc (predicted occurrence from survey data, left column), quadratic effect of Depth, and positive effect of In/near RCA (haul location inside or near rockfish conservation area boundary) for both the binomial and positive components of the delta model. GMRF covariate effects are marginal posterior distributions (`INLA` package in R), and RF covariate effects are feature contributions (`forestFloor` package in R).
+
+The code to produce Figure 2 is quite long:
+
+```{r fig2, eval=FALSE}
+```
+
+### Fig. 6: Map the GMRF spatial random field by year (one for each year, only 1 species) {#fig6}
+
+**Figure 6. GMRF-EXCHANGEABLE random field for bycatch probability of darkblotched rockfish from 2008 to 2012.**
+
+The code to produce Figure 2 is quite long:
+
+```{r fig2, eval=FALSE}
+```
+
+### Fig. S3: Map the GMRF spatial random field (one across all years, for each of 3 species) {#figS3}
+
+**Figure S3. GMRF-CONSTANT spatial random field for bycatch probability of the three West Coast groundfish species (DBRK = darkblotched rockfish, PHLB = Pacific halibut, and YEYE = yelloweye rockfish).** The GMRF-CONSTANT model estimates one spatial field constant across years from 2003-2012. Fitting a complex spatial field is less useful for species with very low bycatch rates (e.g. yelloweye rockfish, right panel, non-zero bycatch in 143 out of 42,787 tows). In these cases, simply including linear and quadratic effects of latitude and longitude could achieve nearly the same result.
+
+The code to produce Figure 2 is quite long:
+
+```{r fig2, eval=FALSE}
+```
+
+### Model descriptions and functions
+
+$Y$ is the response:
+
+  * 0/1 for the binomial component of delta model
+  * catch (kg) for the positive component of delta model
+  
+$Y_j$ denotes response in year $j$ for models that fit spatial terms by year.
+
+  1. GLM
+
+  > $Y$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR
+
+  2. GAM CONSTANT
+  
+  > $Y$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR + s(LON, LAT)
+ 
+  3. GAM IID
+  
+  > $Y_j$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + s(LON, LAT)$_j$
+
+  4. GMRF CONSTANT
+  
+  > $Y$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR + $MVN(0, Q^{-1})$
+
+  5. GMRF EXCHANGEABLE
+  
+  > $Y_j$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR + $MVN(0, Q_j^{-1})$
+
+  6. RF BASE
+  7. RF DOWN
+  8. RF SMOTE
+  
+  > $Y$ ~ logDEPTH, sst, inRCA, DAY, YEAR, LAT, LON

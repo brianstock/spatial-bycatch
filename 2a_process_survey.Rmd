@@ -45,16 +45,16 @@ CATCH <- read.csv("wcann_catch_fram.csv",header=TRUE)
 
 We want a data frame `dat` where each row is a unique haul, with the following columns:
 
-- HAUL_ID: HAUL$trawl_id
-- YEAR: have to calculate from DATE
-- DATE: HAUL$date_yyyymmdd
-- LAT: latitude, HAUL$latitude_hi_prec_dd
-- LON: longitude, HAUL$longitude_hi_prec_dd
-- DEPTH: depth (in m), HAUL$depth_hi_prec_m
-- TOTAL: total vertebrate catch in kg (HAUL$vertebrate_weight_kg)
-- DBRK: darkblotched rockfish catch in kg (CATCH$total_catch_wt_kg for "Sebastes crameri")
-- PHLB: Pacific halibut catch in kg (CATCH$total_catch_wt_kg for "Hippoglossus stenolepis")
-- YEYE: yelloweye rockfish catch in kg (CATCH$total_catch_wt_kg for "Sebastes ruberrimus")
+* HAUL_ID: HAUL$trawl_id
+* YEAR: have to calculate from DATE
+* DATE: HAUL$date_yyyymmdd
+* LAT: latitude, HAUL$latitude_hi_prec_dd
+* LON: longitude, HAUL$longitude_hi_prec_dd
+* DEPTH: depth (in m), HAUL$depth_hi_prec_m
+* TOTAL: total vertebrate catch in kg (HAUL$vertebrate_weight_kg)
+* DBRK: darkblotched rockfish catch in kg (CATCH$total_catch_wt_kg for "Sebastes crameri")
+* PHLB: Pacific halibut catch in kg (CATCH$total_catch_wt_kg for "Hippoglossus stenolepis")
+* YEYE: yelloweye rockfish catch in kg (CATCH$total_catch_wt_kg for "Sebastes ruberrimus")
 
 ```{r}
 # Delete "unsatisfactory" hauls
@@ -104,7 +104,7 @@ dat$YEYE_01[which(dat$YEYE>0)] <- 1
 ```
 
 ### Add SST covariate
-  - `SST`: daily sea surface temperature anomalies (in degC)
+  * `SST`: daily sea surface temperature anomalies (in degC)
   
 Download daily sea surface temperature anomalies (.nc files) for 2003-2013 from: https://www.esrl.noaa.gov/psd/data/gridded/data.noaa.oisst.v2.highres.html 
 
@@ -167,7 +167,7 @@ dat <- dat[-which(is.na(dat$SST)),]
 ```
 
 ### Add inRCA covariate:
-  - `inRCA`: was the haul in/near a Rockfish Conservation Area? 0/1
+  * `inRCA`: was the haul in/near a Rockfish Conservation Area? 0/1
 
 *Note:* The Rockfish Conservation Area (RCA) boundaries have changed by month, year, latitude, and depth. We have prepared `rca_boundaries.csv` using historical RCA boundaries. For more details, see the [RCA webpage](http://www.westcoast.fisheries.noaa.gov/fisheries/management/groundfish_closures/rockfish_areas.html).
 

@@ -19,7 +19,7 @@ library(DMwR)
 library(caret)
 library(mgcv)
 library(INLA)
-INLA:::inla.dynload.workaround() 
+# INLA:::inla.dynload.workaround() 
 
 # Use caret package to do stratified k-fold cross validation
 k = 10
@@ -360,30 +360,40 @@ for(sp in 1:n.species.bin){ # for each species
   sp.lab <- species.bin[sp]
   sp.col <- paste0(sp.lab,"_01")
   sp.ind <- match(sp.col, names(dat))
-  fits.bin[[sp]] <- vector("list", n.models.bin)
+  fits.bin[[sp]] <- vector("list", k)
   
   for(f in 1:k){ # for each fold
+  	fits.bin[[sp]][[f]] <- vector("list", n.models.bin)
     test.id <- ind[[sp]][[f]] # get test rows for this species and fold (10% of data)
     fit.id <- dat[-test.id,"id"] # get rows to fit models (90% of data)
     
+    print(paste0("binomial species ",sp," fold ",f))
+
     # Fit GLM
-    fits.bin[[sp]][[1]] <- fit_GLM(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    fits.bin[[sp]][[f]][[1]] <- fit_GLM(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GAM CONSTANT
-    fits.bin[[sp]][[2]] <- fit_GAM_CONSTANT(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    fits.bin[[sp]][[f]][[2]] <- fit_GAM_CONSTANT(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GAM IID
-    fits.bin[[sp]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    fits.bin[[sp]][[f]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GMRF CONSTANT
-    fits.bin[[sp]][[4]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
+    fits.bin[[sp]][[f]][[4]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
                                     modeltype.GMRF="CONSTANT", fit.id, test.id)
     # Fit GMRF EXCHANGEABLE
-    fits.bin[[sp]][[5]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
+    fits.bin[[sp]][[f]][[5]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
                                     modeltype.GMRF="EXCHANGEABLE", fit.id, test.id)
     # Fit RF BASE
-    fits.bin[[sp]][[6]] <- fit_RF_BASE(dat, sp.ind, rf.covar, modeltype, fit.id, test.id)
+    fits.bin[[sp]][[f]][[6]] <- fit_RF_BASE(dat, sp.ind, rf.covar, modeltype, fit.id, test.id)
     # Fit RF DOWN
-    fits.bin[[sp]][[7]] <- fit_RF_DOWN(dat, sp.ind, rf.covar, fit.id, test.id)    
+    fits.bin[[sp]][[f]][[7]] <- fit_RF_DOWN(dat, sp.ind, rf.covar, fit.id, test.id)    
     # Fit RF SMOTE
-    fits.bin[[sp]][[8]] <- fit_RF_SMOTE(dat, sp.ind, rf.covar, fit.id, test.id)
+    fits.bin[[sp]][[f]][[8]] <- fit_RF_SMOTE(dat, sp.ind, rf.covar, fit.id, test.id)
+
+    # save results for fold f
+    assign("d",fits.bin[[sp]][[f]])
+    save(list=c("d","ind","dat"),file=paste0("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/2b_fits/fits.bin_",sp,"_",f,".RData"))
+    # save(list=c(paste0("fits.bin[[",sp,"]][[",f,"]]"),"ind","dat"),
+    	# file=paste0("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/2b_fits/fits.bin_",sp,"_",f,".RData"))
+
   }
 }
 
@@ -393,9 +403,10 @@ for(sp in 1:n.species.pos){ # for each species
   sp.lab <- species.pos[sp]
   sp.col <- sp.lab
   sp.ind <- match(sp.col, names(dat))
-  fits.pos[[sp]] <- vector("list", n.models.pos)
+  fits.pos[[sp]] <- vector("list", k)
   
   for(f in 1:k){ # for each fold
+  	fits.pos[[sp]][[f]] <- vector("list", n.models.pos)
     test.id <- ind[[sp]][[f]] # get test rows for this species and fold (10% of data)
     fit.id <- dat[-test.id,"id"] # get rows to fit models (90% of data)
     
@@ -405,21 +416,26 @@ for(sp in 1:n.species.pos){ # for each species
   	pos.test <- which(dat[test.id, sp.ind] > 0)
   	test.id <- test.id[pos.test]    
     
+    print(paste0("positive species ",sp," fold ",f))
     # Fit GLM
-    fits.pos[[sp]][[1]] <- fit_GLM(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    fits.pos[[sp]][[f]][[1]] <- fit_GLM(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GAM CONSTANT
-    fits.pos[[sp]][[2]] <- fit_GAM_CONSTANT(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    fits.pos[[sp]][[f]][[2]] <- fit_GAM_CONSTANT(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GAM IID
-    fits.pos[[sp]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    fits.pos[[sp]][[f]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GMRF CONSTANT
-    fits.pos[[sp]][[4]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
+    fits.pos[[sp]][[f]][[4]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
                                     modeltype.GMRF="CONSTANT", fit.id, test.id)
     # Fit GMRF EXCHANGEABLE
-    fits.pos[[sp]][[5]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
+    fits.pos[[sp]][[f]][[5]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
                                     modeltype.GMRF="EXCHANGEABLE", fit.id, test.id)
     # Fit RF BASE
-    fits.pos[[sp]][[6]] <- fit_RF_BASE(dat, sp.ind, rf.covar, modeltype, fit.id, test.id)
+    fits.pos[[sp]][[f]][[6]] <- fit_RF_BASE(dat, sp.ind, rf.covar, modeltype, fit.id, test.id)
+
+    # save results for fold f
+    assign("d",fits.pos[[sp]][[f]])
+    save(list=c("d","ind","dat"),file=paste0("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/2b_fits/fits.pos_",sp,"_",f,".RData"))
   }
 }
 
-save.image("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/wcann_models_finished.RData")
+save.image("/home/brian/Documents/Bycatch/wcann_models_finished.RData")

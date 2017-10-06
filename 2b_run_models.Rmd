@@ -72,8 +72,8 @@ calc_RMSE <- function(pred, obs){
 
 $Y$ is the response:
 
-  - 0/1 for the binomial component of delta model
-  - catch (kg) for the positive component of delta model
+  * 0/1 for the binomial component of delta model
+  * catch (kg) for the positive component of delta model
   
 $Y_j$ denotes response in year $j$ for models that fit spatial terms by year.
 

@@ -31,7 +31,7 @@ Details how we downloaded and processed the data, including preparing the enviro
 
 ##### 2b_run_models
 
-Sets up and runs 10-fold cross validation for all spatial models. *Note that in our manuscript we used 5-fold cross validation repeated 10x. We use 1x 10-fold CV here to save model run time.*
+Sets up and runs 10-fold cross validation for all spatial models. *Note that in our manuscript we used 5-fold cross validation repeated 10x. We use 1x 10-fold CV here to save model run time.* We save the output of this script as `wcann_models_finished.RData`, so if you are not interested in running this step (takes ~24 hours on my computer), you can see the model output.
 
 ##### 2c_output
 
