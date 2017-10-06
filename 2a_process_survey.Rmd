@@ -1,5 +1,5 @@
 ---
-title: "Process West Coast Groundfish Trawl Survey Data"
+title: "Step 1: Process West Coast Groundfish Trawl Survey Data"
 author: "Brian Stock"
 date: "Sept 29, 2017"
 output: html_vignette
@@ -10,7 +10,7 @@ vignette: >
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = '/home/brian/Documents/Bycatch/WCGOP/data/')
+knitr::opts_knit$set(root.dir = '/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch')
 ```
 
 This vignette demonstrates how we downloaded and processed the data for:
@@ -32,7 +32,7 @@ Download the data from [FRAM](https://www.nwfsc.noaa.gov/data/map):
   
 ### Load data into R
 
-```{r}
+```{r eval=FALSE}
 # set working directory to workshop folder with data files
 setwd("/home/brian/Documents/Bycatch/WCGOP/data/")
 # load haul dataset
@@ -56,7 +56,7 @@ We want a data frame `dat` where each row is a unique haul, with the following c
 * PHLB: Pacific halibut catch in kg (CATCH$total_catch_wt_kg for "Hippoglossus stenolepis")
 * YEYE: yelloweye rockfish catch in kg (CATCH$total_catch_wt_kg for "Sebastes ruberrimus")
 
-```{r}
+```{r eval=FALSE}
 # Delete "unsatisfactory" hauls
 HAUL <- subset(HAUL, performance=="Satisfactory")
 # Create empty data frame where each row will be a unique haul
@@ -69,7 +69,7 @@ names(dat) <- cols
 head(dat)
 ```
 
-```{r}
+```{r eval=FALSE}
 # Fill in columns from HAUL
 dat$HAUL_ID <- HAUL$trawl_id
 dat$LAT <- HAUL$latitude_dd
@@ -81,7 +81,7 @@ dat$TOTAL <- HAUL$vertebrate_weight_kg
 dat$TOTAL[which(is.na(dat$TOTAL))] <- 0 # replace NA with 0
 ```
 
-```{r message=FALSE}
+```{r eval=FALSE, message=FALSE}
 # Add catch of each species by haul (takes a couple min)
 library(dplyr)
 dat$YEYE <- dat$DBRK <- dat$PHLB <- 0
@@ -108,7 +108,7 @@ dat$YEYE_01[which(dat$YEYE>0)] <- 1
   
 Download daily sea surface temperature anomalies (.nc files) for 2003-2013 from: https://www.esrl.noaa.gov/psd/data/gridded/data.noaa.oisst.v2.highres.html 
 
-```{r eval=TRUE, echo=TRUE, message=FALSE, results='hide'}
+```{r eval=FALSE, echo=TRUE, message=FALSE, results='hide'}
 # function to get SST daily anomaly at the DATE/LON/LAT for each haul
 #   uses bilinear interpolation from nearest gridpoints
 library(ncdf4)
@@ -171,7 +171,7 @@ dat <- dat[-which(is.na(dat$SST)),]
 
 *Note:* The Rockfish Conservation Area (RCA) boundaries have changed by month, year, latitude, and depth. We have prepared `rca_boundaries.csv` using historical RCA boundaries. For more details, see the [RCA webpage](http://www.westcoast.fisheries.noaa.gov/fisheries/management/groundfish_closures/rockfish_areas.html).
 
-```{r message=FALSE}
+```{r eval=FALSE, message=FALSE}
 library(tidyr)
 
 # Get historical RCA boundary limits
@@ -217,7 +217,7 @@ for(j in 1:nrow(checkRCA)){
 
 Now we transform, center (subtract mean), and create quadratic covariates. The original untransformed, uncentered data in ALL CAPS, e.g. DEPTH. The transformed, centered covariates ready to use in the models are in lower case, e.g. logDEPTH, logDEPTH2.
 
-```{r}
+```{r eval=FALSE}
 # Log transform covariates on large scales
 dat$logDEPTH <- log(dat$DEPTH)
 
@@ -236,7 +236,16 @@ dat$DBRK_01 <- as.factor(dat$DBRK_01)
 dat$PHLB_01 <- as.factor(dat$PHLB_01)
 dat$YEYE_01 <- as.factor(dat$YEYE_01)
 dat$inRCA <- as.factor(dat$inRCA)
-
-# Data are ready to fit
-save(dat, file="/home/brian/Documents/Bycatch/WCGOP/data/wcann_processed.RData")
 ```
+
+### Data are ready to fit
+```{r eval=FALSE}
+save(dat, file="/home/brian/Documents/Bycatch/WCGOP/data/wcann_processed.RData")
+head(dat)
+```
+
+```{r eval=TRUE, echo=FALSE}
+load("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/wcann_processed.RData")
+head(dat)
+```
+

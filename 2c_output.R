@@ -213,17 +213,17 @@ save.image("/home/brian/Documents/Bycatch/figure_data/fig1.RData")
 if(fig2){
   # Fig2a: AUC boxplots for all models
   # Collect binomial model results
-  # species.bin <- c("DBRK","PHLB","YEYE")
-  species.bin <- c("DBRK","PHLB")
+  species.bin <- c("DBRK","PHLB","YEYE")
   n.species.bin <- length(species.bin)
-  models.bin <- c("GLM","GAM CONSTANT","GAM IID","GMRF CONSTANT","GMRF EXCHANGEABLE","RF BASE","RF DOWN","RF SMOTE")
-  n.models.bin <- length(models.bin)
+  models.bin <- c("GLM","GAM","INLA","RF") # only use GAM-CONSTANT, INLA-IID, and RF-BASE
+  best.mod <- c(1,2,5,6) # same best models for all species  
+  n.models.bin <- length(best.mod)
   k=10
   AUC <- array(NA,dim=c(n.species.bin, n.models.bin, k))
   for(sp in 1:n.species.bin){
     for(f in 1:k){
       load(paste0("/home/brian/Documents/Bycatch/figure_data/fits.bin_",sp,"_",f,".RData"))
-      AUC[sp,,f] <- sapply(d, function(l) l[[1]])
+      AUC[sp,,f] <- sapply(d, function(l) l[[1]])[best.mod]
     }
   }
 
@@ -236,22 +236,18 @@ if(fig2){
 
   # AUC boxplot (all species + models)
   library(ggplot2)
-  # dev.new(width=8.25, height=6.35)
-  dev.new()
+  dev.new(width=8.25, height=6.35)
   print(ggplot(aes(y = AUC, x = factor(species), fill = factor(model)), data = AUC.df) + 
     geom_boxplot(outlier.colour = NA, fatten=1) +
-    # coord_cartesian(ylim = c(0.5,1)) +
     theme_bw() +
     xlab("Species") +
     ylab("AUC (Test data)") +
-    # geom_hline(yintercept=0.5,linetype=5) +
-    # scale_x_discrete(labels=c("1"="DBRK","2"="PHLB","3"="YEYE")) +
-    scale_fill_manual(name="Model Class",labels=models.bin, values=c("grey","#E69F00","#E69F00","#56B4E9","#56B4E9","black","black","black")) +
-    # scale_x_discrete(labels=c("GLM","CONSTANT","CONSTANT","FIXED","FIXED","RF")) +
+    coord_cartesian(ylim = c(0.78,1)) +
+    scale_fill_manual(name="Model Class",labels=models.bin, values=c("grey","#E69F00","#56B4E9","black")) +
     theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_blank(), axis.line = element_line(colour = "black"),
           axis.title=element_text(size=18), axis.text=element_text(size=18),
-          legend.text=element_text(size=16), legend.title=element_text(size=18), legend.position = c(0.9, 0.8)))
+          legend.text=element_text(size=16), legend.title=element_text(size=18), legend.position = c(0.9, 0.85)))
   dev.print(png,"/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig2a_AUC.png", bg="white",res=400, width=8.25, height=6.35, units="in")
 
   # --------------------------------------------------------------------
@@ -259,14 +255,16 @@ if(fig2){
   # Collect positive model results
   species.pos <- c("DBRK","PHLB")
   n.species.pos <- length(species.pos)
-  models.pos <- c("GLM","GAM CONSTANT","GAM IID","GMRF CONSTANT","GMRF EXCHANGEABLE","RF BASE")
+  models.pos <- c("GLM","GAM","GMRF","RF")
+  best.mod <- c(1,2,4,6) # GAM CONSTANT and GMRF CONSTANT
   n.models.pos <- length(models.pos)
   k=10
   RMSE <- array(NA,dim=c(n.species.pos, n.models.pos, k))
   for(sp in 1:n.species.pos){
     for(f in 1:k){
       load(paste0("/home/brian/Documents/Bycatch/figure_data/fits.pos_",sp,"_",f,".RData"))
-      RMSE[sp,,f] <- sapply(d, function(l) l[[1]])
+      d[sapply(d, is.null)] <- NA
+      RMSE[sp,,f] <- sapply(d, function(l) l[[1]])[best.mod]
     }
   }
 
@@ -283,29 +281,23 @@ if(fig2){
   dev.new()
   print(ggplot(aes(y = RMSE, x = factor(species), fill = factor(model)), data = RMSE.df) + 
     geom_boxplot(outlier.colour = NA, fatten=1) +
-    # coord_cartesian(ylim = c(0.5,1)) +
+    coord_cartesian(ylim = c(0,150)) +
     theme_bw() +
     xlab("Species") +
     ylab("RMSE (Test data)") +
-    # geom_hline(yintercept=0.5,linetype=5) +
-    # scale_x_discrete(labels=c("1"="DBRK","2"="PHLB","3"="YEYE")) +
-    scale_fill_manual(name="Model Class",labels=models.pos, values=c("grey","#E69F00","#E69F00","#56B4E9","#56B4E9","black")) +
-    # scale_x_discrete(labels=c("GLM","CONSTANT","CONSTANT","FIXED","FIXED","RF")) +
+    scale_fill_manual(name="Model Class",labels=models.pos, values=c("grey","#E69F00","#56B4E9","black")) +
     theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_blank(), axis.line = element_line(colour = "black"),
           axis.title=element_text(size=18), axis.text=element_text(size=18),
-          legend.text=element_text(size=16), legend.title=element_text(size=18), legend.position = c(0.9, 0.8)))
+          legend.text=element_text(size=16), legend.title=element_text(size=18), legend.position = c(0.85, 0.85)))
   dev.print(png,"/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig2b_RMSE.png", bg="white",res=400, width=8.25, height=6.35, units="in")
-
-
 }
 
 # ---------------------------------------------------------------------------
 # Fig 3: bycatch-to-target reduction
 # ---------------------------------------------------------------------------
 if(fig3){
-  # species.labs <- c("DBRK","PHLB","YEYE")
-  species.labs <- c("DBRK","PHLB")
+  species.labs <- c("DBRK","PHLB","YEYE")
   n.sp <- length(species.labs)
   model.labs <- c("GLM","GAM","INLA","RF") # only use GAM-CONSTANT, INLA-IID, and RF-BASE
   best.mod <- c(1,2,5,6) # same best models for both species
@@ -383,7 +375,7 @@ if(fig3){
 
   # Figure S4 (panel plot all species)
   library(ggplot2)
-  png("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig3_all.png",units = 'in',height=4,width=7,res=300)
+  png("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig3_all.png",units = 'in',height=4,width=8,res=300)
   print(
     ggplot(ratio.df, aes(x = f, y = ratio.red, colour=Model, fill=Model,group=Model)) +
     stat_summary(fun.data = median_cl_boot, alpha=.5, color=NA,geom="ribbon") +
@@ -398,8 +390,8 @@ if(fig3){
     theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
     panel.background = element_blank(), axis.line = element_line(colour = "black"),
     axis.title=element_text(size=14), axis.text=element_text(size=12),
-    legend.text=element_text(size=12), legend.title=element_blank(), legend.position = c(0.88, 0.9),
-    legend.key.width = unit(0.5, "in")) 
+    legend.text=element_text(size=10), legend.title=element_blank(), legend.position = c(0.94, 0.81),
+    legend.key.width = unit(0.3, "in")) 
   )
   dev.off()
 
@@ -411,8 +403,6 @@ if(fig3){
     stat_summary(fun.y=median, geom="line",size=1.5, na.rm = TRUE) +
     theme_bw() +
     scale_x_continuous(labels=scales::percent, breaks=c(0,.025,.05,.075,.1)) +  
-    coord_cartesian(ylim = c(0.5,1)) +
-    # scale_y_continuous(labels=scales::percent) +
     xlab("Fishing effort removed") +
     ylab("Relative bycatch:target") +
     scale_colour_manual(name="Model",labels=c("GLM","GAM","GMRF","RF"), values=c("grey","#E69F00", "#56B4E9","black")) +
@@ -649,7 +639,6 @@ out.inla <- inla(formula.inla, num.threads=4, family = family.inla, data=inla.st
   control.fixed = list(expand.factor.strategy='inla',correlation.matrix=TRUE), 
   control.mode = list(theta=start.inla$mode$theta, restart=FALSE), 
   control.results=list(return.marginals.random=FALSE,return.marginals.predictor=FALSE)) 
-save.image("/home/brian/Documents/Bycatch/WCGOP/output/vignette_fig4_GMRF_predict_DBRK_binomial.RData")
 
 # -------------------------------------------------------
 # Step 2b: Fit positive model.
@@ -705,88 +694,653 @@ out.inla.pos <- inla(formula.inla, num.threads=4, family = family.inla.pos, data
   control.fixed = list(expand.factor.strategy='inla',correlation.matrix=TRUE), 
   control.mode = list(theta=start.inla.pos$mode$theta, restart=FALSE), 
   control.results=list(return.marginals.random=FALSE,return.marginals.predictor=FALSE)) # prec.intercept=1, control.mode = list(theta = start.inla$mode$theta, restart = FALSE),, control.inla = list(h=10e-5)) , control.inla = list(int.strategy = "eb")
-save.image("/home/brian/Documents/Bycatch/WCGOP/output/vignette_fig4_GMRF_predict_DBRK.RData")
+save.image("/home/brian/Documents/Bycatch/figure_data/vignette_fig4_GMRF_predict_DBRK.RData")
 
 # --------------------------------------------------------------
 # Step 3. Fit random forest to DBRK, predict to grid locations
+# reload 'dat' and 'predict.grid'
 load("/home/brian/Documents/Bycatch/WCGOP/data/predict.grid.RData")
 library(randomForest)
-library(DMwR)
-library(ROCR)
 
 sp.bin <- "DBRK_01"
 sp.pos <- "DBRK"
-dat$YEAR <- factor(dat$YEAR)
-predict.grid$YEAR <- factor(predict.grid$YEAR)
-predict.grid$DBRK_01 <- predict.grid$DBRK <- NA
 dat[,sp.bin] <- factor(dat[,sp.bin])
 covar = c("logDEPTH", "logDEPTH2", "sst", "sst2", "inRCA", "DAY", "YEAR", "LON", "LAT")
 
-# --------------------------------------------------
-# Step 3-1: Fit binomial = SMOTE
+# Step 3-1: Fit binomial
 # try to not use 'caret' package so we can use ForestFloor afterward
-prop <- table(dat[,sp.bin])[1] / dim(dat)[1]
-p.over <- round(50/prop) # percent to oversample to get to 50%
-p.under <- round(100/(1-prop)) # percent to undersample to get to 50%
-X <- cbind(dat[,covar], dat[,sp.bin])
-names(X) <- c(covar, sp.bin)
-bin.formula <- formula(paste0(sp.bin," ~ ",paste0(covar,collapse=" + ")))
-X.SMOTE <- SMOTE(bin.formula, data=X, k=5, perc.over = p.over, perc.under=p.under)
-X.SMOTE$sst <- as.numeric(X.SMOTE$sst)
-X.SMOTE$logsst2 <- as.numeric(X.SMOTE$logsst2)
-# table(X.SMOTE$BLUE_01) # check now we roughly have class balance
-rf.bin <- randomForest(x=X.SMOTE[,covar], y=X.SMOTE[,sp.bin],mtry=3,ntree=1000,importance=TRUE,do.trace=250,keep.forest=TRUE)
+rf.bin <- randomForest(x=dat[,covar], y=dat[,sp.bin], 
+                    mtry=3, ntree=1000, importance=FALSE, do.trace=250, keep.forest=TRUE) 
 
-# --------------------------------------------------
-# Step 2: Fit positive
+# Step 3-2: Fit positive
 ind0 <- which(dat[,sp.pos]==0)
 dat.pos <- dat[-ind0,]
-rf.pos <- randomForest(x=dat.pos[,covar],y=dat.pos[,sp.pos],mtry=3,ntree=1000,importance=TRUE,do.trace=250,keep.forest=TRUE)
+rf.pos <- randomForest(x=dat.pos[,covar],y=dat.pos[,sp.pos],mtry=3,ntree=1000,importance=TRUE,do.trace=250,keep.forest=TRUE,keep.inbag=TRUE)
 
-# -------------------------------------------------
-# Step 3: predict both models at grid points, multiply together
-n.rows <- dim(predict.grid)[1]
-predict.grid$YEAR <- factor(rep(2014,n.rows),levels=levels(X.SMOTE$YEAR))
+# Step 3-3: predict both models at grid points, multiply together
+# randomForest can't handle missing values in newdata
+predict.grid$logDEPTH[is.na(predict.grid$logDEPTH)] <- min(predict.grid$logDEPTH,na.rm=T)
+predict.grid$logDEPTH2[is.na(predict.grid$logDEPTH2)] <- max(predict.grid$logDEPTH2,na.rm=T)
+predict.grid$YEAR <- factor(rep(2012, dim(predict.grid)[1]),levels=levels(dat$YEAR))
 pred.bin <- predict(rf.bin, newdata=predict.grid[,covar], type='prob', predict.all=TRUE)
 pred.pos <- predict(rf.pos, newdata=predict.grid[,covar], type='response', predict.all=TRUE)
-# pred.expected <- pred.bin*pred.pos
-save(list=c("rf.bin","rf.pos","pred.pos","pred.bin","dat","predict.grid","projgrid"),file="/home/brian/Documents/Bycatch/HILL/data/HILL_predicted_RF.RData")
 
+# instead use infintesimal jackknife to get RF variance
+library(randomForestCI)
+pred.pos.var <- randomForestInfJack(rf.pos, newdata=predict.grid[,covar])
+
+# save(list=c("rf.bin","rf.pos","pred.pos","pred.bin","dat","predict.grid","projgrid"),file="/home/brian/Documents/Bycatch/HILL/data/HILL_predicted_RF.RData")
+
+# ----------------------------------------------------
+# Step 4. GMRF maps
+load("/home/brian/Documents/Bycatch/WCGOP/output/vignette_fig4_GMRF_predict_DBRK.RData")
+library(PBSmapping)
+library(RColorBrewer)
+library(INLA)
+INLA:::inla.dynload.workaround() # necessary because one of my dependencies is old
+library(fields)
+
+# -------------------------------------------------------
+# Step 4-1: Get GMRF predictions on grid
+data(worldLLhigh) # loads the 'worldLL' dataset from the PBSmapping package
+rf <- colorRampPalette(rev(brewer.pal(11,'Spectral')))
+spec200 <- rf(200)
+minX = min(dat$LON)
+maxX = max(dat$LON)
+minY = min(dat$LAT)
+maxY = max(dat$LAT)
+
+ind.bin <- inla.stack.index(sdat.full,'sdat.pred')$data
+predict.grid$BIN.MEAN <- out.inla$summary.fitted.values[ind.bin,"mean"]
+ind.pos <- inla.stack.index(sdat.full.pos,'sdat.pred.pos')$data
+predict.grid$POS.MEAN <- out.inla.pos$summary.fitted.values[ind.pos,"mean"]
+predict.grid$POS.SD <- out.inla.pos$summary.fitted.values[ind.pos,"sd"]
+predict.grid$EXP.MEAN <- predict.grid$BIN.MEAN * predict.grid$POS.MEAN
+# predict.grid$EXP.MEAN[which(predict.grid$EXP.MEAN < 0.4)] <- NA
+predict.grid$EXP.CV <- predict.grid$POS.SD / predict.grid$EXP.MEAN
+
+nxy <- round(c(diff(range(coords.pred[,1])), diff(range(coords.pred[,2])))/0.1) 
+exp.mean.mat <- matrix(log(predict.grid$EXP.MEAN), nrow=nxy[1], ncol=nxy[2], byrow=FALSE)
+exp.cv.mat <- matrix(log(predict.grid$EXP.CV), nrow=nxy[1], ncol=nxy[2], byrow=FALSE)
+
+exp.mean.mat <- matrix(predict.grid$BIN.MEAN, nrow=nxy[1], ncol=nxy[2], byrow=FALSE)
+
+
+# ---------------------------------------------------
+# Step 4-2: Plot log expected mean
+# dev.new(width=6.2, height=9.1)
+# layout(matrix(c(1,2), nrow=2, ncol=1), widths=c(6.2), heights=c(4,5.1))
+# dev.new(width=6.2, height=4.4)
+dev.new()
+minP <- min(exp.mean.mat,na.rm=TRUE)
+maxP <- max(exp.mean.mat,na.rm=TRUE)
+plotMap(worldLLhigh, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+   main="",plt = c(0.11, 0.9, 0.05, 0.9), cex.axis=1.3, cex.lab=1.5)
+title("INLA log mean Exp(BLUE)",line=1)
+rect(minX, minY, maxX, maxY, density = 20, col='grey')
+rect(minX, minY, maxX, maxY, density = 20, col='grey', angle=135)
+image(projgrid$lattice$x, projgrid$lattice$y, exp.mean.mat, col=spec200,add=T, breaks = seq(minP,maxP,length.out=201))
+lev = levels(as.factor(worldLLhigh$PID))
+for(i in 1:length(lev)) {
+   indx = which(worldLLhigh$PID == lev[i])
+   polygon(worldLLhigh$X[indx], worldLLhigh$Y[indx], col = "grey")
+}
+# image.plot(smallplot=c(.87,.89,0.05,0.9),col=spec200,zlim=c(round(minP,1),round(maxP,1)),
+#    legend.only=TRUE,legend.shrink=0.3,lab.break=round(seq(minP,maxP,length.out=4),1))
+image.plot(smallplot=c(.91,.93,0.12,0.835),col=spec200,zlim=c(round(minP,1),round(maxP,1)),
+   legend.only=TRUE,lab.break=round(seq(minP,maxP,length.out=4),1))
+# dev.print(tiff,"/home/brian/Dropbox/bycatch/manuscript/figures/fig2_INLA_RF_allsp/BLUE_INLA_mean.tiff", compression="lzw",bg="white",res=400, height=4.4, width=6.2, units="in")
+dev.print(png,"/home/brian/Dropbox/bycatch/manuscript/figures/fig2_INLA_RF_allsp/BLUE_INLA_mean.png",bg="white",res=400, height=4.4, width=6.2, units="in")
+dev.off()
+
+# ---------------------------------------------------
+# Step 3: Plot log expected CV
+dev.new(width=6.2, height=4.4)
+minP <- min(exp.cv.mat,na.rm=TRUE)
+maxP <- max(exp.cv.mat,na.rm=TRUE)
+plotMap(worldLLhigh, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+   main="",plt = c(0.11, 0.9, 0.05, 0.9), cex.axis=1.3, cex.lab=1.5)
+title("INLA log CV Exp(BLUE)",line=1)
+rect(minX, minY, maxX, maxY, density = 20, col='grey')
+rect(minX, minY, maxX, maxY, density = 20, col='grey', angle=135)
+image(projgrid$lattice$x, projgrid$lattice$y, exp.cv.mat, col=spec200,add=T, breaks = seq(minP,maxP,length.out=201))
+lev = levels(as.factor(worldLLhigh$PID))
+for(i in 1:length(lev)) {
+   indx = which(worldLLhigh$PID == lev[i])
+   polygon(worldLLhigh$X[indx], worldLLhigh$Y[indx], col = "grey")
+}
+# image.plot(smallplot=c(.87,.89,0.05,0.9),col=spec200,zlim=c(round(minP,1),round(maxP,1)),
+#    legend.only=TRUE,legend.shrink=0.3,lab.break=round(seq(minP,maxP,length.out=4),1))
+image.plot(smallplot=c(.91,.93,0.12,0.835),col=spec200,zlim=c(round(minP,1),round(maxP,1)),
+   legend.only=TRUE,lab.break=round(seq(minP,maxP,length.out=4),1))
+# dev.print(tiff,"/home/brian/Dropbox/bycatch/manuscript/figures/fig2_INLA_RF_allsp/BLUE_INLA_logCV.tiff", compression="lzw",bg="white",res=400, height=4.4, width=6.2, units="in")
+dev.print(png,"/home/brian/Dropbox/bycatch/manuscript/figures/fig2_INLA_RF_allsp/BLUE_INLA_logCV.png",bg="white",res=400, height=4.4, width=6.2, units="in")
+dev.off()
+
+# ---------------------------------------------------
+# Step 4: Plot log expected Var
+predict.grid$POS.VAR <- predict.grid$POS.SD^2
+predict.grid$POS.VAR[which(predict.grid$POS.VAR < exp(-5.2) & predict.grid$LAT > 40)] <- NA
+predict.grid$POS.VAR[which(predict.grid$POS.VAR < exp(-6) & predict.grid$LAT < 23)] <- NA
+exp.cv.mat <- matrix(log(predict.grid$POS.VAR), nrow=nxy[1], ncol=nxy[2], byrow=FALSE)
+minP <- min(exp.cv.mat,na.rm=TRUE)
+maxP <- max(exp.cv.mat,na.rm=TRUE)
+
+dev.new(width=6.2, height=4.4)
+plotMap(worldLLhigh, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+   main="",plt = c(0.11, 0.9, 0.05, 0.9), cex.axis=1.3, cex.lab=1.5)
+title("INLA log Var Exp(BLUE)",line=1)
+rect(minX, minY, maxX, maxY, density = 20, col='grey')
+rect(minX, minY, maxX, maxY, density = 20, col='grey', angle=135)
+image(projgrid$lattice$x, projgrid$lattice$y, exp.cv.mat, col=spec200,add=T, breaks = seq(minP,maxP,length.out=201))
+lev = levels(as.factor(worldLLhigh$PID))
+for(i in 1:length(lev)) {
+   indx = which(worldLLhigh$PID == lev[i])
+   polygon(worldLLhigh$X[indx], worldLLhigh$Y[indx], col = "grey")
+}
+# image.plot(smallplot=c(.87,.89,0.05,0.9),col=spec200,zlim=c(round(minP,1),round(maxP,1)),
+#    legend.only=TRUE,legend.shrink=0.3,lab.break=round(seq(minP,maxP,length.out=4),1))
+image.plot(smallplot=c(.91,.93,0.12,0.835),col=spec200,zlim=c(round(minP,1),round(maxP,1)),
+   legend.only=TRUE,lab.break=round(seq(minP,maxP,length.out=4),1))
+# dev.print(tiff,"/home/brian/Dropbox/bycatch/manuscript/figures/fig2_INLA_RF_allsp/BLUE_INLA_logCV.tiff", compression="lzw",bg="white",res=400, height=4.4, width=6.2, units="in")
+dev.print(png,"/home/brian/Dropbox/bycatch/manuscript/figures/fig2_INLA_RF_allsp/BLUE_INLA_logVar.png",bg="white",res=400, height=4.4, width=6.2, units="in")
+dev.off()
 
 
 } # end Figure 4
 
-# ### Model descriptions and functions
+if(fig5){
+library(dplyr)
+library(mvtnorm)
+library(ggplot2)
+library(reshape2)
 
-# $Y$ is the response:
+# --------------------------------------------------
+# Step 5-1: GMRF marginals
+species.labels <- c("DBRK","PHLB")
+mods <- c("bin","pos")
+# Change sp and m to run for other species / models
+# Here we show results from DBRK binomial model
+sp=1
+m=1
+load(paste0("/home/brian/Documents/Bycatch/figure_data/fits.",mods[m],"_",sp,"_1.RData")) # use fold 1
+out.inla <- d[[4]]$out.inla
+setwd(paste0("/home/brian/Documents/Bycatch/figure_data/fig5_marginals/",species.labels[sp],"_",mods[m]))
 
-#   - 0/1 for the binomial component of delta model
-#   - catch (kg) for the positive component of delta model
-  
-# $Y_j$ denotes response in year $j$ for models that fit spatial terms by year.
+# -------------------------------------------------------------------
+# Plot marginals over continuous covariates (sst, depth)
+N = 10000
+coefs.pres = rmvnorm(N, mean = out.inla$summary.fixed[,1], sigma = (out.inla$misc$lincomb.derived.covariance.matrix))
+covar <- rownames(out.inla$summary.fixed)
 
-#   1. GLM
+# -------------------------------------------------------------
+# Marginal over sst anomaly
+minCovar = min(dat[,"sst"],na.rm=T)
+maxCovar = max(dat[,"sst"],na.rm=T)
+rangeCovar = seq(minCovar,maxCovar,length.out=40)
+predPos = matrix(sort(rep(rangeCovar,N)), N, length(rangeCovar))
+covarEff = matrix(sort(rep(rangeCovar,N)), N, length(rangeCovar))
+for(i in 1:N) {
+  # calculate Pr(bycatch), using sst and mean of other covariates:
+  predPos[i,] = mean(coefs.pres[i,7:15]) + # mean of year fixed effects
+                (covarEff[i,])*coefs.pres[i,3] + # sst
+                (covarEff[i,]^2)*coefs.pres[i,4] + # sst2
+                mean(dat$logDEPTH,na.rm=T)*coefs.pres[i,1] + # mean of logDEPTH
+                mean(dat$logDEPTH2,na.rm=T)*coefs.pres[i,2] + # mean of logDEPTH2
+                mean(as.numeric(as.character(dat$inRCA)))*coefs.pres[i,5] + # mean of inRCA
+                mean(dat$DAY)*coefs.pres[i,6] # mean of DAY
+}
+if(m==1){
+  # convert back to p-space (inverse logit)
+  predPos.norm = exp(predPos)/(1+exp(predPos))
+  y.lab <- "Probability of bycatch"
+}
+if(m==2){
+  # convert back to kg (from log-space)
+  predPos.norm = exp(predPos)
+  y.lab <- "Expected bycatch density (mt)"
+}
+# put x axis back on original (un-centered) scale
+origCovar = rangeCovar + mean(dat$SST) 
 
-#   > $Y$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR
+x.lab <- expression(paste("Sea surface temperature anomaly (",degree,"C)",sep=""))
+df <- data.frame(x=origCovar, med=apply(predPos.norm,2,median), low=apply(predPos.norm,2,quantile,0.025), high=apply(predPos.norm,2,quantile,0.975))
+png(paste0("marginal_",species.labels[sp],"_",mods[m],"_SST.png"),units = 'in',height=7,width=7,res=300)
+print(ggplot2::ggplot(data=df,ggplot2::aes(x=x,y=med)) +
+  ggplot2::geom_line(ggplot2::aes(x=x, y=med),size=1.5) +
+  ggplot2::geom_ribbon(ggplot2::aes(ymin=low, ymax=high), fill="grey",alpha=0.35) +
+  ggplot2::ylab(y.lab) +
+  ggplot2::xlab(x.lab) +
+  # coord_cartesian(xlim = c(minX,maxX)) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(panel.border = ggplot2::element_blank(), panel.grid.major = ggplot2::element_blank(), 
+    panel.grid.minor = ggplot2::element_blank(), panel.background = ggplot2::element_blank(), 
+    axis.line = ggplot2::element_line(colour = "black"), axis.title=ggplot2::element_text(size=16), 
+    axis.text=ggplot2::element_text(size=14), legend.text=ggplot2::element_text(size=14)))
+dev.off()
 
-#   2. GAM CONSTANT
-  
-#   > $Y$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR + s(LON, LAT)
- 
-#   3. GAM IID
-  
-#   > $Y_j$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + s(LON, LAT)$_j$
+# -------------------------------------------------------------
+# Marginal over depth
+minCovar = min(dat[,"logDEPTH"],na.rm=T)
+maxCovar = max(dat[,"logDEPTH"],na.rm=T)
+rangeCovar = seq(minCovar,maxCovar,length.out=40)
+predPos = matrix(sort(rep(rangeCovar,N)), N, length(rangeCovar))
+covarEff = matrix(sort(rep(rangeCovar,N)), N, length(rangeCovar))
+for(i in 1:N) {
+  # calculate Pr(bycatch), using sst and mean of other covariates:
+  predPos[i,] = mean(coefs.pres[i,7:15]) + # mean of year fixed effects
+                mean(dat$sst,na.rm=TRUE)*coefs.pres[i,3] + # sst
+                mean(dat$sst2,na.rm=TRUE)*coefs.pres[i,4] + # sst2
+                (covarEff[i,])*coefs.pres[i,1] + # mean of logDEPTH
+                (covarEff[i,]^2)*coefs.pres[i,2] + # mean of logDEPTH2
+                mean(as.numeric(as.character(dat$inRCA)))*coefs.pres[i,5] + # mean of inRCA
+                mean(dat$DAY)*coefs.pres[i,6] # mean of DAY      
+}
+if(m==1){
+  # convert back to p-space (inverse logit)
+  predPos.norm = exp(predPos)/(1+exp(predPos))
+  y.lab <- "Probability of bycatch"
+}
+if(m==2){
+  # convert back to kg (from log-space)
+  predPos.norm = exp(predPos)
+  y.lab <- "Expected bycatch density (mt)"
+}
+# put x axis back on original (un-centered, un-transformed) scale
+origCovar = exp(rangeCovar + mean(log(dat$DEPTH)))
 
-#   4. GMRF CONSTANT
-  
-#   > $Y$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR + $MVN(0, Q^{-1})$
+x.lab <- "Depth (m)"
+df <- data.frame(x=origCovar, med=apply(predPos.norm,2,median), low=apply(predPos.norm,2,quantile,0.025), high=apply(predPos.norm,2,quantile,0.975))
+png(paste0("marginal_",species.labels[sp],"_",mods[m],"_DEPTH.png"),units = 'in',height=7,width=7,res=300)
+print(ggplot2::ggplot(data=df,ggplot2::aes(x=x,y=med)) +
+  ggplot2::geom_line(ggplot2::aes(x=x, y=med),size=1.5) +
+  ggplot2::geom_ribbon(ggplot2::aes(ymin=low, ymax=high), fill="grey",alpha=0.35) +
+  ggplot2::ylab(y.lab) +
+  ggplot2::xlab(x.lab) +
+  # coord_cartesian(xlim = c(minX,maxX)) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(panel.border = ggplot2::element_blank(), panel.grid.major = ggplot2::element_blank(), 
+    panel.grid.minor = ggplot2::element_blank(), panel.background = ggplot2::element_blank(), 
+    axis.line = ggplot2::element_line(colour = "black"), axis.title=ggplot2::element_text(size=16), 
+    axis.text=ggplot2::element_text(size=14), legend.text=ggplot2::element_text(size=14)))
+dev.off()   
 
-#   5. GMRF EXCHANGEABLE
-  
-#   > $Y_j$ ~ logDEPTH + logDEPTH$^2$ + sst + sst$^2$ + inRCA + DAY + YEAR + $MVN(0, Q_j^{-1})$
+# -----------------------------------------------------
+# Marginal inRCA
+ind.pred <- inla.stack.index(d[[4]]$sdat.full,'sdat.fit')$data
+pred.real <- out.inla$summary.fitted.values[ind.pred,"mean"]
+obs <- dat$inRCA[d[[4]]$fit.id]
+ind0 <- which(obs==0)
+ind1 <- which(obs==1)
 
-#   6. RF BASE
-#   7. RF DOWN
-#   8. RF SMOTE
-  
-#   > $Y$ ~ logDEPTH, sst, inRCA, DAY, YEAR, LAT, LON
+n.pres <- length(which(obs==1))
+n.abs <- length(which(obs==0))
+pred.occur.df <- data.frame(matrix(NA, nrow = d[[4]]$n.fit, ncol = 2))
+names(pred.occur.df) <- c("Outside RCA","In/Near RCA")
+pred.occur.df[1:n.abs,1] <- pred.real[which(obs==0)]
+pred.occur.df[1:n.pres,2] <- pred.real[which(obs==1)]
+# apply(pred.occur.df,2,mean,na.rm=TRUE)
+pred.occur.df.plot <- melt(pred.occur.df)
+
+if(m==1) y.lab <- "Probability of bycatch"
+if(m==2) y.lab <- "Expected bycatch density (mt)"
+
+png(paste0("marginal_",species.labels[sp],"_",mods[m],"_inRCA.png"),units = 'in',height=7,width=7,res=300)
+
+if(m==2){
+  max.y <- quantile(pred.occur.df.plot$value,.99,na.rm=T)
+  print(ggplot(pred.occur.df.plot, aes(x = variable, y = value)) +
+    geom_boxplot(fill="grey", outlier.shape=NA) +
+    theme_bw() +
+    coord_cartesian(ylim = c(0,max.y)) +
+    scale_y_continuous(expand = c(0, 0)) + 
+    xlab("") +
+    ylab("Expected bycatch density (mt)") +
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+    panel.background = element_blank(), axis.line = element_line(colour = "black"),
+    axis.title=element_text(size=14), axis.text=element_text(size=14),
+    legend.text=element_text(size=12), legend.title=element_text(size=14)))
+}
+if(m==1){
+  print(ggplot(pred.occur.df.plot, aes(x = variable, y = value)) +
+  geom_boxplot(fill="grey", outlier.shape=NA) +
+  theme_bw() +
+  coord_cartesian(ylim = c(0,1)) +
+  scale_y_continuous(expand = c(0, 0)) + 
+  xlab("") +
+  ylab("Probability of bycatch") +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+  panel.background = element_blank(), axis.line = element_line(colour = "black"),
+  axis.title=element_text(size=14), axis.text=element_text(size=14),
+  legend.text=element_text(size=12), legend.title=element_text(size=14)))
+}
+dev.off()
+
+# -------------------------------------------------------
+# Step 5-2: random forest feature contributions
+# need to re-run RF with keep.inbag=TRUE
+# get test/train indicies for same fold we just used for GMRF marginals
+library(randomForest)
+library(forestFloor)
+test.id <- ind[[sp]][[1]] 
+fit.id <- dat[-test.id,"id"]
+covar <- c("DEPTH", "sst", "inRCA", "DAY", "YEAR", "LAT", "LON")
+n.covar <- length(covar)
+
+# get correct column of dat (bin vs. pos)
+if(m==1) sp.ind <- paste0(species.labels[sp],"_01")
+if(m==2) sp.ind <- species.labels[sp]
+
+# fit random forest
+fit <- randomForest(x=dat[fit.id, covar], y=dat[fit.id, sp.ind], 
+                    mtry=3, ntree=1000, importance=FALSE, do.trace=250, 
+                    keep.forest=TRUE, keep.inbag=TRUE)
+
+# use forestFloor to calculate feature contributions of each covariate
+ff.bin = forestFloor(
+  rf.fit = fit,       # mandatory
+  X = dat[fit.id,covar],
+  calc_np = FALSE,    # TRUE or FALSE both works, makes no difference
+  binary_reg = TRUE  # takes no effect here when rfo$type="regression"
+)
+
+# simple plot of each covariate one by one
+for(i in 1:n.covar){
+  png(paste0("RFmarginal_",species.labels[sp],"_",mods[m],"_",covar[i],".png"),units = 'in',height=7,width=7,res=300)
+  plot(ff.bin,                       # forestFloor object
+       plot_seq = i,
+       col="grey",           # optional sequence of features to plot
+       orderByImportance=FALSE    # if TRUE index sequence by importance, else by X column  
+  )
+  dev.off()
+}
+
+# ------------------------------------------------------
+# nicer plots, comparable to GMRF marginals
+# -----------------------------------------------------
+# 1. categorical covarate (inRCA)
+obs.RCA <- dat[fit.id,"inRCA"]
+obs <- dat[fit.id,sp.ind]
+RCA.col <- match("inRCA",attributes(ff.bin$FCmatrix)$dimnames[[2]])
+pred.real <- ff.bin$FCmatrix[,RCA.col]
+ind0 <- which(obs.RCA==0)
+ind1 <- which(obs.RCA==1)
+
+n.in <- length(which(obs.RCA==1))
+n.out <- length(which(obs.RCA==0))
+pred.occur.df <- data.frame(matrix(NA, nrow = length(obs.RCA), ncol = 2))
+names(pred.occur.df) <- c("Outside RCA","In/Near RCA")
+pred.occur.df[1:n.out,1] <- pred.real[which(obs.RCA==0)]
+pred.occur.df[1:n.in,2] <- pred.real[which(obs.RCA==1)]
+# apply(pred.occur.df,2,mean,na.rm=TRUE)
+pred.occur.df.plot <- melt(pred.occur.df)
+
+# if(mod==1) y.lab <- "Probability of bycatch"
+# if(mod==2) y.lab <- "Expected bycatch density (mt)"
+y.lab <- "Feature contribution"
+
+png(paste0("RFmarginal_",species.labels[sp],"_",mods[m],"_inRCA.png"),units = 'in',height=7,width=7,res=300)
+print(ggplot(pred.occur.df.plot, aes(x = variable, y = value)) +
+geom_boxplot(fill="grey", alpha=0.35, outlier.shape=NA) +
+theme_bw() +
+coord_cartesian(ylim = quantile(pred.occur.df.plot$value, c(0.01, 0.99), na.rm=T)) +
+# scale_y_continuous(expand = c(0, 0)) + 
+xlab("") +
+ylab(y.lab) +
+theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+panel.background = element_blank(), axis.line = element_line(colour = "black"),
+axis.title=element_text(size=14), axis.text=element_text(size=14),
+legend.text=element_text(size=12), legend.title=element_text(size=14)))
+dev.off()
+
+# ------------------------------------------------
+# 2. Continuous covariates (sst, depth)
+labels <- c("Depth (m)", expression(paste("Sea surface temperature anomaly (",degree,"C)",sep="")))
+cov.labs <- c("DEPTH","sst")
+cov <- c(1,2) # get indices of sst and depth
+for(c in 1:length(labels)){
+  n.bin = 50
+  fc <- ff.bin$FCmatrix[,cov[c]]
+  x <- dat[fit.id, cov.labs[c]]
+  # grp <- cut_number(x,n.bin)
+  xbin <- seq(from=min(x),to=max(x),length.out=n.bin+1)
+  fc.low <- fc.high <- fc.med <- x.med <- bin.n <- rep(NA,n.bin)
+  for(bin in 1:n.bin){
+    # b <- which(grp == levels(grp)[bin])
+    b <- which(x > xbin[bin] & x < xbin[bin+1])
+    fc.low[bin] <- quantile(fc[b],.025)
+    fc.high[bin] <- quantile(fc[b],.975)
+    fc.med[bin] <- median(fc[b])
+    x.med[bin] <- median(x[b])
+    bin.n[bin] <- length(x[b])
+    if(bin.n[bin] < 5) fc.low[bin] <- fc.high[bin] <- fc.med[bin] <- x.med[bin] <- NA
+  }
+  minX <- min(x.med,na.rm=T)
+  maxX <- max(x.med,na.rm=T)
+  df <- data.frame(med=fc.med,low=fc.low,high=fc.high,x=xbin[1:n.bin])
+  # df <- data.frame(med=fc.med,low=fc.low,high=fc.high,x=x.med)
+      png(paste0("RFmarginal_",species.labels[sp],"_",mods[m],"_",cov.labs[c],".png"),units = 'in',height=7,width=7,res=300)
+          print(ggplot2::ggplot(data=df,ggplot2::aes(x=x,y=med)) +
+          ggplot2::geom_line(ggplot2::aes(x=x, y=med),size=1.5) +
+          ggplot2::geom_ribbon(ggplot2::aes(ymin=low, ymax=high), fill="grey",alpha=0.35) +
+          ggplot2::ylab("Feature contribution") +
+          ggplot2::xlab(labels[c]) +
+          coord_cartesian(xlim = c(minX,maxX)) +
+          ggplot2::theme_bw() +
+          ggplot2::theme(panel.border = ggplot2::element_blank(), panel.grid.major = ggplot2::element_blank(), 
+            panel.grid.minor = ggplot2::element_blank(), panel.background = ggplot2::element_blank(), 
+            axis.line = ggplot2::element_line(colour = "black"), axis.title=ggplot2::element_text(size=16), 
+            axis.text=ggplot2::element_text(size=14), legend.text=ggplot2::element_text(size=14), legend.position=c(.02,1), 
+            legend.justification=c(0,1), legend.title=ggplot2::element_blank()))
+  dev.off()
+}
+
+} # end figure 5 (marginals)
+
+if(fig6){
+# GMRF EXCHANGEABLE spatial field mean by year
+library(PBSmapping)
+library(INLA)
+INLA:::inla.dynload.workaround()
+
+# Get model object (DBRK binomial, fold 1)
+load(paste0("/home/brian/Documents/Bycatch/figure_data/fits.bin_1_1.RData")) # use fold 1
+out.inla <- d[[5]]$out.inla # GMRF EXCHANGEABLE = model 5
+fit.id <- d[[5]]$fit.id
+mesh1 <- d[[5]]$mesh1
+iset <- d[[5]]$iset
+covar <- c("logDEPTH", "logDEPTH2", "sst", "sst2", "inRCA", "DAY")
+n.covar <- length(covar)
+
+# Define map region
+coords = cbind(dat$LON[fit.id], dat$LAT[fit.id])
+minX = min(floor(coords[,1]))
+maxX = max(ceiling(coords[,1]))
+minY = min(floor(coords[,2]))
+maxY = max(ceiling(coords[,2]))
+
+# Not much interesting happens below 40 deg Lat, let's cut off the plots there
+minY = 40
+maxX = -122 # can also zoom in on the x axis when we cut at Lat 40
+
+# Create grid to project onto
+stepsize <- 0.01
+nxy <- round(c(diff(range(coords[,1])), diff(range(coords[,2])))/stepsize)
+projgrid = inla.mesh.projector(mesh1, xlim = c(minX,maxX), ylim=c(minY,maxY),dims = nxy)
+
+# Get predictions on the grid
+n.years <- length(table(dat$YEAR))
+projectedMaps = list()
+for (yr in 1:n.years) {
+  # use mean of fixed effects (variability will only be the GMRF)
+  projectedMaps[[yr]] <- inla.mesh.project(projgrid, out.inla$summary.random$i$mean[iset$i.group==yr]) + 
+                              out.inla$summary.fixed["sst",1]*mean(dat$sst) +
+                              out.inla$summary.fixed["sst2",1]*mean(dat$sst2) + 
+                              out.inla$summary.fixed["logDEPTH",1]*mean(dat$logDEPTH) + 
+                              out.inla$summary.fixed["logDEPTH2",1]*mean(dat$logDEPTH2) + 
+                              out.inla$summary.fixed["inRCA",1]*mean(as.numeric(as.character(dat$inRCA))) +
+                              out.inla$summary.fixed["DAY",1]*mean(dat$DAY)
+  # convert to p-space (bycatch probability) using inverse logit
+  projectedMaps[[yr]] <- exp(projectedMaps[[yr]])/(1+exp(projectedMaps[[yr]] ))
+}
+
+library(RColorBrewer)
+rf <- colorRampPalette(rev(brewer.pal(11,'Spectral')))
+spec200 <- rf(200)
+# Get range of predicted probabilities now so consistent zlim for all years
+minP <- min(unlist(projectedMaps),na.rm=TRUE)
+maxP <- max(unlist(projectedMaps),na.rm=TRUE)
+
+# load NE Pacific dataset from the PBSmapping package
+data(nepacLL) 
+
+# plot the last 5 years (2008-2012)
+source("/home/brian/Dropbox/bycatch/manuscript/figures/fig1_effort_catch/image.scale.R")
+library(fields)
+
+# plot each year separately and stitch together afterward
+plot.yrs <- 1:5
+n.yrs <- length(plot.yrs)
+widths = rep(2,n.yrs)
+widths[1] <- widths[1] + 0.7
+widths[length(widths)] <- widths[length(widths)] + 0.8
+heights = rep(7,n.yrs)
+tot.width <- sum(widths)
+for(yr in plot.yrs) {
+   dev.new(width= widths[yr], heights=heights[yr])
+   if(yr == plot.yrs[1]){ # plot y axis
+      par(mar=c(3, 3, 2, 0) + 0.1)
+      plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+         cex.axis=1.5, cex.lab=1.7, main="",plt=NULL)
+   }
+   if(yr != plot.yrs[1] & yr != plot.yrs[n.yrs]){ # don't plot y axis
+      par(mar=c(3, 0, 2, 0) + 0.1)
+      plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+         ylab="", yaxt="n", cex.axis=1.5, cex.lab=1.7, main="",plt=NULL)
+   }
+   if(yr == plot.yrs[n.yrs]){ # don't plot y axis
+      par(mar=c(3, 0, 2, 4) + 0.1)
+      plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+         ylab="", yaxt="n", cex.axis=1.5, cex.lab=1.7, main="",plt=NULL)
+   }   
+   rect(minX, minY, maxX, maxY, density = 20, col='grey')
+   rect(minX, minY, maxX, maxY, density = 20, col='grey', angle=135)
+   yr.lab <- as.numeric(names(table(dat$YEAR))[yr])
+   title(yr.lab, line=1)
+
+   image(projgrid$lattice$x, projgrid$lattice$y, projectedMaps[[yr]], col=spec200, add=T, breaks = seq(0,maxP,length.out=201))
+   lev = levels(as.factor(nepacLL$PID))
+   for(i in 1:length(lev)) {
+      indx = which(nepacLL$PID == lev[i])
+      polygon(nepacLL$X[indx], nepacLL$Y[indx], col = "grey")
+   }
+   if(yr == plot.yrs[n.yrs]){ # add zscale
+      image.plot(smallplot=c(.73,.8,0.09,0.94),col=spec200,zlim=c(round(minP),round(maxP)),legend.only=TRUE,legend.shrink=0.3)
+   }
+   dims <- dev.size()
+   dev.print(png,paste0("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/fig6_DBRK_",yr.lab,".png"), res=600, height=dims[2], width=dims[1], units="in")
+   dev.off()
+}
+
+} # end figure 6
+
+# ----------------------------------------------------------
+# Fig S3: spatial field (constant) by species
+if(figS3){
+library(PBSmapping)
+library(INLA)
+INLA:::inla.dynload.workaround()
+
+load("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/wcann_processed.RData")
+minX = min(floor(dat$LON))
+maxX = max(ceiling(dat$LON))
+minY = min(floor(dat$LAT))
+maxY = max(ceiling(dat$LAT))
+
+# cutoff at Lat=40, Long=-122
+maxX = -122
+minY = 40
+
+# all have same covariates
+covar <- c("logDEPTH", "logDEPTH2", "sst", "sst2", "inRCA", "DAY")
+n.covar <- length(covar)
+
+plot.sp <- c("DBRK","PHLB","YEYE")
+projectedMaps = list()
+for(sp in 1:length(plot.sp)){
+  load(paste0("/home/brian/Documents/Bycatch/figure_data/fits.bin_",sp,"_1.RData")) # use fold 1
+  out.inla <- d[[4]]$out.inla # GMRF CONSTANT = model 4
+  fit.id <- d[[4]]$fit.id
+  mesh1 <- d[[4]]$mesh1
+  iset <- d[[4]]$iset
+
+  stepsize <- 0.01
+  nxy <- round(c(maxX-minX, maxY-minY)/stepsize)
+  projgrid = inla.mesh.projector(mesh1, xlim = c(minX,maxX), ylim=c(minY,maxY),dims = nxy)
+  projectedMaps[[sp]] <- inla.mesh.project(projgrid, out.inla$summary.random$i$mean) + 
+                              out.inla$summary.fixed["sst",1]*mean(dat$sst) +
+                              out.inla$summary.fixed["sst2",1]*mean(dat$sst2) + 
+                              out.inla$summary.fixed["logDEPTH",1]*mean(dat$logDEPTH) + 
+                              out.inla$summary.fixed["logDEPTH2",1]*mean(dat$logDEPTH2) + 
+                              out.inla$summary.fixed["inRCA",1]*mean(as.numeric(as.character(dat$inRCA))) +
+                              out.inla$summary.fixed["DAY",1]*mean(dat$DAY)
+  # convert to p-space (bycatch probability) using inverse logit                              
+  projectedMaps[[sp]] <- exp(projectedMaps[[sp]])/(1+exp(projectedMaps[[sp]] ))
+}
+
+# set color scale
+library(RColorBrewer)
+rf <- colorRampPalette(rev(brewer.pal(11,'Spectral')))
+spec200 <- rf(200)
+
+library(fields)
+source("/home/brian/Dropbox/bycatch/manuscript/figures/fig1_effort_catch/image.scale.R")
+
+# load NE Pacific dataset from the PBSmapping package
+data(nepacLL) 
+
+# plot each species separately and stitch together afterward
+widths = c(3.5,2.8,3)
+heights = rep(7,3)
+tot.width <- sum(widths)
+
+for(sp in 1:3) {
+   dev.new(width= widths[sp], heights=heights[sp])
+   if(sp == 1){ # plot y axis
+      par(mar=c(3, 3, 2, 4) + 0.1)
+      plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+         cex.axis=1.5, cex.lab=1.7, main="",plt=NULL)#,plt = c(0.01, 0.99, 0.12, 0.88))
+   }
+   if(sp == 2){ # don't plot y axis
+      par(mar=c(3, 0, 2, 4) + 0.1)
+      plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+         ylab="", yaxt="n", cex.axis=1.5, cex.lab=1.7, main="",plt=NULL)#,plt = c(0.01, 0.99, 0.12, 0.88))
+   }
+   if(sp == 3){ # don't plot y axis
+      par(mar=c(3, 0, 2, 5) + 0.1)
+      plotMap(nepacLL, xlim=c(minX,maxX),ylim=c(minY,maxY),col='grey',
+         ylab="", yaxt="n", cex.axis=1.5, cex.lab=1.7, main="",plt=NULL)#,plt = c(0.01, 0.99, 0.12, 0.88))
+   }   
+   rect(minX, minY, maxX, maxY, density = 20, col='grey')
+   rect(minX, minY, maxX, maxY, density = 20, col='grey', angle=135)
+   title(plot.sp[sp], line=1)
+
+  # minP <- min(projectedMaps[[sp]],na.rm=TRUE)
+  maxP <- max(projectedMaps[[sp]],na.rm=TRUE)
+   image(projgrid$lattice$x, projgrid$lattice$y, projectedMaps[[sp]], col=spec200, add=T, breaks = seq(0,maxP,length.out=201))
+   lev = levels(as.factor(nepacLL$PID))
+   for(i in 1:length(lev)) {
+      indx = which(nepacLL$PID == lev[i])
+      polygon(nepacLL$X[indx], nepacLL$Y[indx], col = "grey")
+   }
+   # if(sp == 3){ # add zscale
+    if(sp==1) image.plot(smallplot=c(.78,.85,0.09,0.94),col=spec200,zlim=c(0,round(maxP,1)),legend.only=TRUE,legend.shrink=0.3)
+    if(sp==2) image.plot(smallplot=c(.73,.8,0.09,0.94),col=spec200,zlim=c(0,round(maxP,1)),legend.only=TRUE,legend.shrink=0.3)
+    if(sp==3) image.plot(smallplot=c(.7,.77,0.09,0.94),col=spec200,zlim=c(0,round(maxP,3)),legend.only=TRUE,legend.shrink=0.3)
+   # }
+   dims <- dev.size()
+   dev.print(png,paste0("/home/brian/Dropbox/bycatch/manuscript/spatial-bycatch/figures/figS3_spatial_field_sp",sp,".png"), res=700, height=dims[2], width=dims[1], units="in")
+}
+
+} # end figure S3
+

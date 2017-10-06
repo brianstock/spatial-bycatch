@@ -29,17 +29,17 @@ Get straight to running the models, starting with a prepared `.RData` file:
 
 Details how we downloaded and processed the data, including preparing the environmental covariates. We save the output of this script as `wcann_processed.RData`, so if you are not interested in this step, you can skip ahead to run the spatial models.
 
-##### 2b_run_models
+##### [2b_run_models](https://rawgit.com/brianstock/spatial-bycatch/master/2b_run_models.html)
 
 Sets up and runs 10-fold cross validation for all spatial models. *Note that in our manuscript we used 5-fold cross validation repeated 10x. We use 1x 10-fold CV here to save model run time.* We save the output of this script as `wcann_models_finished.RData`, so if you are not interested in running this step (takes ~24 hours on my computer), you can see the model output.
 
-##### 2c_output
+##### [2c_output](https://rawgit.com/brianstock/spatial-bycatch/master/2c_output.html)
 
 Creates output from model runs, replicating the figures from our analysis:
-  1. Maps of effort and catch (visualize the raw data)
-  2. Maps of predicted density (mean) and variablity (log CV)
-  3. Compare model performance with boxplots of AUC and RMSE
-  4. Visualize covariate effects for GMRF and RF
-  5. Compare the reduction in bycatch-to-target ratio
-  6. Map the GMRF spatial random field by year (one for each year, only 1 species)
-  7. Map the GMRF spatial random field (one across all years, for each of 3 species)
+  * Fig. 1: Maps of effort and catch (raw data)
+  * Fig. 2: Compare model performance with boxplots of AUC and RMSE
+  * Fig. 3: Compare the reduction in bycatch-to-target ratio
+  * Fig. 4: Maps of predicted density (mean) and variablity (log CV)
+  * Fig. 5: Visualize covariate effects for GMRF and RF
+  * Fig. 6: Map the GMRF spatial random field by year (one for each year, only 1 species)
+  * Fig. S3: Map the GMRF spatial random field (one across all years, for each of 3 species)

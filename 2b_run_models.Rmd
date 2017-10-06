@@ -1,5 +1,5 @@
 ---
-title: "Run spatiotemporal models for fisheries bycatch prediction"
+title: "Step 2: Run spatiotemporal models for fisheries bycatch prediction"
 author: "Brian Stock"
 date: "Sept 29, 2017"
 output: html_vignette
@@ -17,7 +17,7 @@ This vignette demonstrates how we ran the spatiotemporal models in:
 
 > Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. "Random forests outperform other species distribution models for spatiotemporal fisheries bycatch prediction."
 
-We assume you either 1) have already seen [`2a_process_survey`](https://rawgit.com/brianstock/spatial-bycatch/master/2a_process_survey.html), or 2) are not interested in how the data were processed/prepared. Either way, from this point we continue by using the saved output of `2a_process_survey`: `wcann_processed.RData`.
+We assume you either 1) have already seen [`2a_process_survey`](https://rawgit.com/brianstock/spatial-bycatch/master/2a_process_survey.html), or 2) are not interested in how the data were processed/prepared. Either way, from this point we continue by using the saved output of `2a_process_survey` (`wcann_processed.RData`).
 
 *Note:* Because the fisheries observer datasets we used are confidential ([WCGOP](https://www.nwfsc.noaa.gov/research/divisions/fram/observation/data_collection/manuals/2017%20WCGOP%20Training%20Manual%20Final%20website%20copy.pdf), [HILL](http://www.nmfs.noaa.gov/pr/interactions/fkwtrt/meeting1/handouts/observer_manual.pdf)), here we perform the same analyses using the publically available [West Coast Groundfish Trawl Survey](https://www.nwfsc.noaa.gov/research/divisions/fram/groundfish/bottom_trawl.cfm).
 
@@ -36,7 +36,7 @@ library(DMwR)
 library(caret)
 library(mgcv)
 library(INLA)
-INLA:::inla.dynload.workaround() 
+# INLA:::inla.dynload.workaround() # if old dependencies
 ```
 
 ### Setup stratified 10-fold cross validation
@@ -66,7 +66,6 @@ calc_RMSE <- function(pred, obs){
   return(RMSE)
 }
 ```
-
 
 ### Model descriptions and functions
 
@@ -416,7 +415,9 @@ fit_RF_SMOTE <- function(dat, sp.ind, covar, fit.id, test.id){
 
 ### Run the models
 
-```{r}
+**Warning: this took 40 hours on a 12-core 32gb RAM machine**
+
+```{r eval=FALSE}
 # Set up binomial model storage
 species.bin <- c("DBRK","PHLB","YEYE")
 n.species.bin <- length(species.bin)
@@ -493,8 +494,11 @@ for(sp in 1:n.species.pos){ # for each species
     fits.pos[[sp]][[1]] <- fit_GLM(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GAM CONSTANT
     fits.pos[[sp]][[2]] <- fit_GAM_CONSTANT(dat, sp.ind, covar, modeltype, fit.id, test.id)
-    # Fit GAM IID
-    fits.pos[[sp]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    
+    # GAM IID crashes for PHLB
+    if(sp==1) fits.pos[[sp]][[f]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    if(sp==2) fits.pos[[sp]][[f]][[3]] <- NULL
+    
     # Fit GMRF CONSTANT
     fits.pos[[sp]][[4]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
                                     modeltype.GMRF="CONSTANT", fit.id, test.id)

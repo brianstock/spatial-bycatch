@@ -421,8 +421,11 @@ for(sp in 1:n.species.pos){ # for each species
     fits.pos[[sp]][[f]][[1]] <- fit_GLM(dat, sp.ind, covar, modeltype, fit.id, test.id)
     # Fit GAM CONSTANT
     fits.pos[[sp]][[f]][[2]] <- fit_GAM_CONSTANT(dat, sp.ind, covar, modeltype, fit.id, test.id)
-    # Fit GAM IID
-    fits.pos[[sp]][[f]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    
+    # GAM IID crashes for PHLB
+    if(sp==1) fits.pos[[sp]][[f]][[3]] <- fit_GAM_IID(dat, sp.ind, covar, modeltype, fit.id, test.id)
+    if(sp==2) fits.pos[[sp]][[f]][[3]] <- NULL
+
     # Fit GMRF CONSTANT
     fits.pos[[sp]][[f]][[4]] <- fit_GMRF(dat, sp.ind, covar, modeltype, 
                                     modeltype.GMRF="CONSTANT", fit.id, test.id)
