@@ -69,13 +69,13 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Step 1: Process West Coast Groundfish Trawl Survey Data</h1>
 <h4 class="author"><em>Brian Stock</em></h4>
-<h4 class="date"><em>Sept 29, 2017</em></h4>
+<h4 class="date"><em>July 3, 2018</em></h4>
 
 
 
-<p>This vignette demonstrates how we downloaded and processed the data for:</p>
+<p>This vignette demonstrates how we ran the spatiotemporal models in:</p>
 <blockquote>
-<p>Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. “Random forests outperform other species distribution models for spatiotemporal fisheries bycatch prediction.”</p>
+<p>Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. “Comparing predictions of fisheries bycatch using multiple spatiotemporal species distribution model frameworks.”</p>
 </blockquote>
 <p>If you are not interested in the data processing, you can skip ahead to <a href="https://rawgit.com/brianstock/spatial-bycatch/master/2_run_models.html">2_run_models</a>, which uses the saved output of this script (<code>wcann_processed.RData</code>) to run the spatial models.</p>
 <div id="download-the-data" class="section level3">
@@ -117,43 +117,43 @@ CATCH &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class
 <li>YEYE: yelloweye rockfish catch in kg (CATCH$total_catch_wt_kg for “Sebastes ruberrimus”)</li>
 </ul>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Delete &quot;unsatisfactory&quot; hauls</span>
-HAUL &lt;-<span class="st"> </span><span class="kw">subset</span>(HAUL, performance==<span class="st">&quot;Satisfactory&quot;</span>)
+HAUL &lt;-<span class="st"> </span><span class="kw">subset</span>(HAUL, performance<span class="op">==</span><span class="st">&quot;Satisfactory&quot;</span>)
 <span class="co"># Create empty data frame where each row will be a unique haul</span>
 cols &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;HAUL_ID&quot;</span>,<span class="st">&quot;YEAR&quot;</span>,<span class="st">&quot;DATE&quot;</span>,<span class="st">&quot;LAT&quot;</span>,<span class="st">&quot;LON&quot;</span>,<span class="st">&quot;DEPTH&quot;</span>,<span class="st">&quot;TOTAL&quot;</span>,<span class="st">&quot;DBRK&quot;</span>,<span class="st">&quot;PHLB&quot;</span>,<span class="st">&quot;YEYE&quot;</span>)
-hauls &lt;-<span class="st"> </span><span class="kw">unique</span>(HAUL$trawl_id)
+hauls &lt;-<span class="st"> </span><span class="kw">unique</span>(HAUL<span class="op">$</span>trawl_id)
 n.hauls &lt;-<span class="st"> </span><span class="kw">length</span>(hauls)
 dat &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, <span class="dt">nrow=</span>n.hauls, <span class="dt">ncol=</span><span class="kw">length</span>(cols))
 dat &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(dat)
 <span class="kw">names</span>(dat) &lt;-<span class="st"> </span>cols
 <span class="kw">head</span>(dat)</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Fill in columns from HAUL</span>
-dat$HAUL_ID &lt;-<span class="st"> </span>HAUL$trawl_id
-dat$LAT &lt;-<span class="st"> </span>HAUL$latitude_dd
-dat$LON &lt;-<span class="st"> </span>HAUL$longitude_dd
-dat$DEPTH &lt;-<span class="st"> </span>HAUL$depth_hi_prec_m
-dat$DATE &lt;-<span class="st"> </span><span class="kw">as.Date</span>(<span class="kw">as.character</span>(HAUL$date_yyyymmdd),<span class="dt">format =</span> <span class="st">&quot;%Y%m%d&quot;</span>)
-dat$YEAR &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">format</span>(dat$DATE,<span class="st">&quot;%Y&quot;</span>))
-dat$TOTAL &lt;-<span class="st"> </span>HAUL$vertebrate_weight_kg
-dat$TOTAL[<span class="kw">which</span>(<span class="kw">is.na</span>(dat$TOTAL))] &lt;-<span class="st"> </span><span class="dv">0</span> <span class="co"># replace NA with 0</span></code></pre></div>
+dat<span class="op">$</span>HAUL_ID &lt;-<span class="st"> </span>HAUL<span class="op">$</span>trawl_id
+dat<span class="op">$</span>LAT &lt;-<span class="st"> </span>HAUL<span class="op">$</span>latitude_dd
+dat<span class="op">$</span>LON &lt;-<span class="st"> </span>HAUL<span class="op">$</span>longitude_dd
+dat<span class="op">$</span>DEPTH &lt;-<span class="st"> </span>HAUL<span class="op">$</span>depth_hi_prec_m
+dat<span class="op">$</span>DATE &lt;-<span class="st"> </span><span class="kw">as.Date</span>(<span class="kw">as.character</span>(HAUL<span class="op">$</span>date_yyyymmdd),<span class="dt">format =</span> <span class="st">&quot;%Y%m%d&quot;</span>)
+dat<span class="op">$</span>YEAR &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">format</span>(dat<span class="op">$</span>DATE,<span class="st">&quot;%Y&quot;</span>))
+dat<span class="op">$</span>TOTAL &lt;-<span class="st"> </span>HAUL<span class="op">$</span>vertebrate_weight_kg
+dat<span class="op">$</span>TOTAL[<span class="kw">which</span>(<span class="kw">is.na</span>(dat<span class="op">$</span>TOTAL))] &lt;-<span class="st"> </span><span class="dv">0</span> <span class="co"># replace NA with 0</span></code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Add catch of each species by haul (takes a couple min)</span>
 <span class="kw">library</span>(dplyr)
-dat$YEYE &lt;-<span class="st"> </span>dat$DBRK &lt;-<span class="st"> </span>dat$PHLB &lt;-<span class="st"> </span><span class="dv">0</span>
-for(i in <span class="dv">1</span>:n.hauls){
+dat<span class="op">$</span>YEYE &lt;-<span class="st"> </span>dat<span class="op">$</span>DBRK &lt;-<span class="st"> </span>dat<span class="op">$</span>PHLB &lt;-<span class="st"> </span><span class="dv">0</span>
+<span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>n.hauls){
   <span class="co"># get all species caught in the ith haul</span>
-    cur_haul &lt;-<span class="st"> </span><span class="kw">filter</span>(CATCH, trawl_id==dat$HAUL_ID[i])
-    if(<span class="st">&quot;yelloweye rockfish&quot;</span> %in%<span class="st"> </span>cur_haul$common_name) dat$YEYE[i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dplyr::<span class="kw">filter</span>(cur_haul, common_name==<span class="st">&quot;yelloweye rockfish&quot;</span>) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(total_catch_wt_kg))
-    if(<span class="st">&quot;darkblotched rockfish&quot;</span> %in%<span class="st"> </span>cur_haul$common_name) dat$DBRK[i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dplyr::<span class="kw">filter</span>(cur_haul,common_name==<span class="st">&quot;darkblotched rockfish&quot;</span>) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(total_catch_wt_kg))
-    if(<span class="st">&quot;Pacific halibut&quot;</span> %in%<span class="st"> </span>cur_haul$common_name) dat$PHLB[i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dplyr::<span class="kw">filter</span>(cur_haul,common_name==<span class="st">&quot;Pacific halibut&quot;</span>) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(total_catch_wt_kg))
+    cur_haul &lt;-<span class="st"> </span><span class="kw">filter</span>(CATCH, trawl_id<span class="op">==</span>dat<span class="op">$</span>HAUL_ID[i])
+    <span class="cf">if</span>(<span class="st">&quot;yelloweye rockfish&quot;</span> <span class="op">%in%</span><span class="st"> </span>cur_haul<span class="op">$</span>common_name) dat<span class="op">$</span>YEYE[i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dplyr<span class="op">::</span><span class="kw">filter</span>(cur_haul, common_name<span class="op">==</span><span class="st">&quot;yelloweye rockfish&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">select</span>(total_catch_wt_kg))
+    <span class="cf">if</span>(<span class="st">&quot;darkblotched rockfish&quot;</span> <span class="op">%in%</span><span class="st"> </span>cur_haul<span class="op">$</span>common_name) dat<span class="op">$</span>DBRK[i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dplyr<span class="op">::</span><span class="kw">filter</span>(cur_haul,common_name<span class="op">==</span><span class="st">&quot;darkblotched rockfish&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">select</span>(total_catch_wt_kg))
+    <span class="cf">if</span>(<span class="st">&quot;Pacific halibut&quot;</span> <span class="op">%in%</span><span class="st"> </span>cur_haul<span class="op">$</span>common_name) dat<span class="op">$</span>PHLB[i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dplyr<span class="op">::</span><span class="kw">filter</span>(cur_haul,common_name<span class="op">==</span><span class="st">&quot;Pacific halibut&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">select</span>(total_catch_wt_kg))
 }
 <span class="co"># Order by date</span>
-dat &lt;-<span class="st"> </span>dat[<span class="kw">order</span>(dat$DATE),]
+dat &lt;-<span class="st"> </span>dat[<span class="kw">order</span>(dat<span class="op">$</span>DATE),]
 <span class="co"># Add DAY covariate: day of the year</span>
-dat$DAY &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dat$DATE -<span class="st"> </span><span class="kw">as.Date</span>(<span class="kw">paste0</span>(dat$YEAR,<span class="st">&quot;-01-01&quot;</span>)))
+dat<span class="op">$</span>DAY &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(dat<span class="op">$</span>DATE <span class="op">-</span><span class="st"> </span><span class="kw">as.Date</span>(<span class="kw">paste0</span>(dat<span class="op">$</span>YEAR,<span class="st">&quot;-01-01&quot;</span>)))
 <span class="co"># Add binomial catch columns</span>
-dat$DBRK_01 &lt;-<span class="st"> </span>dat$PHLB_01 &lt;-<span class="st"> </span>dat$YEYE_01 &lt;-<span class="st"> </span><span class="dv">0</span>
-dat$DBRK_01[<span class="kw">which</span>(dat$DBRK&gt;<span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span>
-dat$PHLB_01[<span class="kw">which</span>(dat$PHLB&gt;<span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span>
-dat$YEYE_01[<span class="kw">which</span>(dat$YEYE&gt;<span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span></code></pre></div>
+dat<span class="op">$</span>DBRK_<span class="dv">01</span> &lt;-<span class="st"> </span>dat<span class="op">$</span>PHLB_<span class="dv">01</span> &lt;-<span class="st"> </span>dat<span class="op">$</span>YEYE_<span class="dv">01</span> &lt;-<span class="st"> </span><span class="dv">0</span>
+dat<span class="op">$</span>DBRK_<span class="dv">01</span>[<span class="kw">which</span>(dat<span class="op">$</span>DBRK<span class="op">&gt;</span><span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span>
+dat<span class="op">$</span>PHLB_<span class="dv">01</span>[<span class="kw">which</span>(dat<span class="op">$</span>PHLB<span class="op">&gt;</span><span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span>
+dat<span class="op">$</span>YEYE_<span class="dv">01</span>[<span class="kw">which</span>(dat<span class="op">$</span>YEYE<span class="op">&gt;</span><span class="dv">0</span>)] &lt;-<span class="st"> </span><span class="dv">1</span></code></pre></div>
 </div>
 <div id="add-sst-covariate" class="section level3">
 <h3>Add SST covariate</h3>
@@ -164,24 +164,24 @@ dat$YEYE_01[<span class="kw">which</span>(dat$YEYE&gt;<span class="dv">0</span>)
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># function to get SST daily anomaly at the DATE/LON/LAT for each haul</span>
 <span class="co">#   uses bilinear interpolation from nearest gridpoints</span>
 <span class="kw">library</span>(ncdf4)
-get_SST &lt;-<span class="st"> </span>function(dat){
-  for(i in <span class="dv">1</span>:<span class="kw">dim</span>(dat)[<span class="dv">1</span>]){ <span class="co"># for each row i</span>
-    this.yr =<span class="st"> </span>dat$YEAR[i]
+get_SST &lt;-<span class="st"> </span><span class="cf">function</span>(dat){
+  <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">dim</span>(dat)[<span class="dv">1</span>]){ <span class="co"># for each row i</span>
+    this.yr =<span class="st"> </span>dat<span class="op">$</span>YEAR[i]
     nc =<span class="st"> </span><span class="kw">nc_open</span>(<span class="kw">paste</span>(<span class="st">&quot;/home/brian/Documents/Bycatch/WCGOP/data/sst.day.anom.&quot;</span>,this.yr,<span class="st">&quot;.v2.nc&quot;</span>,<span class="dt">sep=</span><span class="st">&quot;&quot;</span>)) <span class="co"># you will need to edit to where you saved the .nc files</span>
-    ncdates =<span class="st"> </span>nc$dim$time$vals                          <span class="co"># gets vector of dates of the current year</span>
+    ncdates =<span class="st"> </span>nc<span class="op">$</span>dim<span class="op">$</span>time<span class="op">$</span>vals                          <span class="co"># gets vector of dates of the current year</span>
     ncdates =<span class="st"> </span><span class="kw">as.Date</span>(ncdates,<span class="dt">origin =</span> <span class="st">'1800-1-1'</span>)      <span class="co"># formats date vector</span>
-    date1a =<span class="st"> </span><span class="kw">which.min</span>(<span class="kw">abs</span>(dat$DATE[i] -<span class="st"> </span>ncdates))      <span class="co"># finds the day of the calendar year for this haul (e.g. 01/04/year = 4, and 02/01/year = 32)</span>
-    all.lat =<span class="st"> </span>nc$dim$lat$vals                           
-    lat1a =<span class="st"> </span><span class="kw">which.min</span>(<span class="kw">abs</span>(dat$LAT[i] -<span class="st"> </span>all.lat))        <span class="co"># index of haul's LAT</span>
-    all.lon =<span class="st"> </span>nc$dim$lon$vals
-    lon1a =<span class="st"> </span><span class="kw">which.min</span>(<span class="kw">abs</span>(((<span class="dv">180</span>+dat$LON[i])+<span class="dv">180</span>) -<span class="st"> </span>all.lon)) <span class="co"># index of haul's LON</span>
+    date1a =<span class="st"> </span><span class="kw">which.min</span>(<span class="kw">abs</span>(dat<span class="op">$</span>DATE[i] <span class="op">-</span><span class="st"> </span>ncdates))      <span class="co"># finds the day of the calendar year for this haul (e.g. 01/04/year = 4, and 02/01/year = 32)</span>
+    all.lat =<span class="st"> </span>nc<span class="op">$</span>dim<span class="op">$</span>lat<span class="op">$</span>vals                           
+    lat1a =<span class="st"> </span><span class="kw">which.min</span>(<span class="kw">abs</span>(dat<span class="op">$</span>LAT[i] <span class="op">-</span><span class="st"> </span>all.lat))        <span class="co"># index of haul's LAT</span>
+    all.lon =<span class="st"> </span>nc<span class="op">$</span>dim<span class="op">$</span>lon<span class="op">$</span>vals
+    lon1a =<span class="st"> </span><span class="kw">which.min</span>(<span class="kw">abs</span>(((<span class="dv">180</span><span class="op">+</span>dat<span class="op">$</span>LON[i])<span class="op">+</span><span class="dv">180</span>) <span class="op">-</span><span class="st"> </span>all.lon)) <span class="co"># index of haul's LON</span>
         
-    this.lon =<span class="st"> </span><span class="dv">360</span>+dat$LON[i]                           <span class="co"># haul LONG</span>
-    this.lat =<span class="st"> </span>dat$LAT[i]                               <span class="co"># haul LAT</span>
-    lat.hi =<span class="st"> </span><span class="kw">which</span>(all.lat &gt;<span class="st"> </span>dat$LAT[i])[<span class="dv">1</span>]             <span class="co"># index of LAT *just above* haul LAT</span>
-    lat.lo =<span class="st"> </span>lat.hi -<span class="st"> </span><span class="dv">1</span>                                 <span class="co"># index of LAT *just below* haul LAT</span>
-    lon.hi =<span class="st"> </span><span class="kw">which</span>(all.lon &gt;<span class="st"> </span>(<span class="dv">360</span>+dat$LON[i]))[<span class="dv">1</span>]       <span class="co"># index of LONG *just above* haul LON</span>
-    lon.lo =<span class="st"> </span>lon.hi -<span class="st"> </span><span class="dv">1</span>                                 <span class="co"># index of LON *just below* haul LONG</span>
+    this.lon =<span class="st"> </span><span class="dv">360</span><span class="op">+</span>dat<span class="op">$</span>LON[i]                           <span class="co"># haul LONG</span>
+    this.lat =<span class="st"> </span>dat<span class="op">$</span>LAT[i]                               <span class="co"># haul LAT</span>
+    lat.hi =<span class="st"> </span><span class="kw">which</span>(all.lat <span class="op">&gt;</span><span class="st"> </span>dat<span class="op">$</span>LAT[i])[<span class="dv">1</span>]             <span class="co"># index of LAT *just above* haul LAT</span>
+    lat.lo =<span class="st"> </span>lat.hi <span class="op">-</span><span class="st"> </span><span class="dv">1</span>                                 <span class="co"># index of LAT *just below* haul LAT</span>
+    lon.hi =<span class="st"> </span><span class="kw">which</span>(all.lon <span class="op">&gt;</span><span class="st"> </span>(<span class="dv">360</span><span class="op">+</span>dat<span class="op">$</span>LON[i]))[<span class="dv">1</span>]       <span class="co"># index of LONG *just above* haul LON</span>
+    lon.lo =<span class="st"> </span>lon.hi <span class="op">-</span><span class="st"> </span><span class="dv">1</span>                                 <span class="co"># index of LON *just below* haul LONG</span>
 
     <span class="co"># get the SST anomolies from the ncdf object</span>
       <span class="co"># start = X,Y,time (anom object is 3-D)</span>
@@ -193,29 +193,29 @@ get_SST &lt;-<span class="st"> </span>function(dat){
     sst10 =<span class="st"> </span>sstfield[lon.hi,lat.lo]
     sst11 =<span class="st"> </span>sstfield[lon.hi,lat.hi]
    
-    if(<span class="kw">is.na</span>(sst00)) sst00 =<span class="st"> </span>sst10
-    if(<span class="kw">is.na</span>(sst10)) sst10 =<span class="st"> </span>sst00
-    if(<span class="kw">is.na</span>(sst01)) sst01 =<span class="st"> </span>sst11
-    if(<span class="kw">is.na</span>(sst11)) sst11 =<span class="st"> </span>sst01
+    <span class="cf">if</span>(<span class="kw">is.na</span>(sst00)) sst00 =<span class="st"> </span>sst10
+    <span class="cf">if</span>(<span class="kw">is.na</span>(sst10)) sst10 =<span class="st"> </span>sst00
+    <span class="cf">if</span>(<span class="kw">is.na</span>(sst01)) sst01 =<span class="st"> </span>sst11
+    <span class="cf">if</span>(<span class="kw">is.na</span>(sst11)) sst11 =<span class="st"> </span>sst01
     
     <span class="co"># This math makes sense if you draw it out       </span>
     <span class="co"># We first do linear interpolation in the x-direction. This yields</span>
-    fR1 =<span class="st"> </span>(all.lon[lon.hi]-this.lon)/(all.lon[lon.hi]-all.lon[lon.lo])*sst00 +<span class="st"> </span>(this.lon-all.lon[lon.lo])/(all.lon[lon.hi]-all.lon[lon.lo])*sst10
-    fR2 =<span class="st"> </span>(all.lon[lon.hi]-this.lon)/(all.lon[lon.hi]-all.lon[lon.lo])*sst01 +<span class="st"> </span>(this.lon-all.lon[lon.lo])/(all.lon[lon.hi]-all.lon[lon.lo])*sst11
+    fR1 =<span class="st"> </span>(all.lon[lon.hi]<span class="op">-</span>this.lon)<span class="op">/</span>(all.lon[lon.hi]<span class="op">-</span>all.lon[lon.lo])<span class="op">*</span>sst00 <span class="op">+</span><span class="st"> </span>(this.lon<span class="op">-</span>all.lon[lon.lo])<span class="op">/</span>(all.lon[lon.hi]<span class="op">-</span>all.lon[lon.lo])<span class="op">*</span>sst10
+    fR2 =<span class="st"> </span>(all.lon[lon.hi]<span class="op">-</span>this.lon)<span class="op">/</span>(all.lon[lon.hi]<span class="op">-</span>all.lon[lon.lo])<span class="op">*</span>sst01 <span class="op">+</span><span class="st"> </span>(this.lon<span class="op">-</span>all.lon[lon.lo])<span class="op">/</span>(all.lon[lon.hi]<span class="op">-</span>all.lon[lon.lo])<span class="op">*</span>sst11
     <span class="co"># Next do interpolation of these values in Y-direction. This yields, </span>
-    sst.interp =<span class="st"> </span>(all.lat[lat.hi]-this.lat)/(all.lat[lat.hi]-all.lat[lat.lo])*fR1 +<span class="st"> </span>(this.lat-all.lat[lat.lo])/(all.lat[lat.hi]-all.lat[lat.lo])*fR2
+    sst.interp =<span class="st"> </span>(all.lat[lat.hi]<span class="op">-</span>this.lat)<span class="op">/</span>(all.lat[lat.hi]<span class="op">-</span>all.lat[lat.lo])<span class="op">*</span>fR1 <span class="op">+</span><span class="st"> </span>(this.lat<span class="op">-</span>all.lat[lat.lo])<span class="op">/</span>(all.lat[lat.hi]<span class="op">-</span>all.lat[lat.lo])<span class="op">*</span>fR2
     <span class="kw">print</span>(<span class="kw">paste</span>(i,sst.interp,<span class="dt">sep=</span><span class="st">&quot;  &quot;</span>))
-    dat$SST[i] =<span class="st"> </span>sst.interp
+    dat<span class="op">$</span>SST[i] =<span class="st"> </span>sst.interp
     <span class="kw">nc_close</span>(nc)
   } <span class="co"># end for loop over haul points</span>
   <span class="kw">return</span>(dat)
 } <span class="co"># end function get_SST</span>
 
-dat$SST =<span class="st"> </span><span class="dv">0</span>
+dat<span class="op">$</span>SST =<span class="st"> </span><span class="dv">0</span>
 dat &lt;-<span class="st"> </span><span class="kw">get_SST</span>(dat) <span class="co"># takes about 5 min to do all 7,240 locations</span>
 
 <span class="co"># delete records where SST is NA</span>
-dat &lt;-<span class="st"> </span>dat[-<span class="kw">which</span>(<span class="kw">is.na</span>(dat$SST)),]</code></pre></div>
+dat &lt;-<span class="st"> </span>dat[<span class="op">-</span><span class="kw">which</span>(<span class="kw">is.na</span>(dat<span class="op">$</span>SST)),]</code></pre></div>
 </div>
 <div id="add-inrca-covariate" class="section level3">
 <h3>Add inRCA covariate:</h3>
@@ -229,61 +229,61 @@ dat &lt;-<span class="st"> </span>dat[-<span class="kw">which</span>(<span class
 rca &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;/home/brian/Documents/Bycatch/WCGOP/data/rca_boundaries.csv&quot;</span>,<span class="dt">header=</span><span class="ot">TRUE</span>)
 
 <span class="co"># Get latitude bins -- different for each year</span>
-years &lt;-<span class="st"> </span><span class="kw">sort</span>(<span class="kw">as.numeric</span>(<span class="kw">levels</span>(<span class="kw">as.factor</span>(rca$Year))),<span class="dt">decreasing=</span><span class="ot">TRUE</span>)
-get_n_bins &lt;-<span class="st"> </span>function(yr) {a &lt;-<span class="st"> </span>rca %&gt;%<span class="st"> </span>dplyr::<span class="kw">filter</span>(Year==yr) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(Lat.low) %&gt;%<span class="st"> </span>dim; <span class="kw">return</span>(a[<span class="dv">1</span>])}
+years &lt;-<span class="st"> </span><span class="kw">sort</span>(<span class="kw">as.numeric</span>(<span class="kw">levels</span>(<span class="kw">as.factor</span>(rca<span class="op">$</span>Year))),<span class="dt">decreasing=</span><span class="ot">TRUE</span>)
+get_n_bins &lt;-<span class="st"> </span><span class="cf">function</span>(yr) {a &lt;-<span class="st"> </span>rca <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Year<span class="op">==</span>yr) <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">select</span>(Lat.low) <span class="op">%&gt;%</span><span class="st"> </span>dim; <span class="kw">return</span>(a[<span class="dv">1</span>])}
 n.bins &lt;-<span class="st"> </span><span class="kw">sapply</span>(years,get_n_bins)
 LAT.bins &lt;-<span class="st"> </span><span class="ot">NULL</span>
-for(yr in <span class="dv">1</span>:<span class="kw">length</span>(n.bins)){ LAT.bins &lt;-<span class="st"> </span><span class="kw">c</span>(LAT.bins,n.bins[yr]:<span class="dv">1</span>) }
-rca.new &lt;-<span class="st"> </span>rca %&gt;%<span class="st"> </span><span class="kw">mutate</span>(<span class="dt">LAT.bin=</span>LAT.bins) %&gt;%<span class="st"> </span><span class="kw">gather</span>(Month,Close,Jan:Dec)
-close.lohi &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(rca.new$Close,<span class="st">&quot;-&quot;</span>))), <span class="dt">ncol=</span><span class="dv">2</span>, <span class="dt">byrow=</span><span class="ot">TRUE</span>)
-rca.new &lt;-<span class="st"> </span>rca.new %&gt;%<span class="st"> </span><span class="kw">mutate</span>(<span class="dt">close.low=</span>close.lohi[,<span class="dv">1</span>],<span class="dt">close.high=</span>close.lohi[,<span class="dv">2</span>])
+<span class="cf">for</span>(yr <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(n.bins)){ LAT.bins &lt;-<span class="st"> </span><span class="kw">c</span>(LAT.bins,n.bins[yr]<span class="op">:</span><span class="dv">1</span>) }
+rca.new &lt;-<span class="st"> </span>rca <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">LAT.bin=</span>LAT.bins) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">gather</span>(Month,Close,Jan<span class="op">:</span>Dec)
+close.lohi &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(rca.new<span class="op">$</span>Close,<span class="st">&quot;-&quot;</span>))), <span class="dt">ncol=</span><span class="dv">2</span>, <span class="dt">byrow=</span><span class="ot">TRUE</span>)
+rca.new &lt;-<span class="st"> </span>rca.new <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">close.low=</span>close.lohi[,<span class="dv">1</span>],<span class="dt">close.high=</span>close.lohi[,<span class="dv">2</span>])
 
 <span class="co"># RCA boundaries are defined by depth bins, in fathoms</span>
 <span class="co"># Get depth bins for survey haul locations</span>
-dat$fath &lt;-<span class="st"> </span>dat$DEPTH*<span class="fl">0.546806649</span> <span class="co"># get depth in fathoms, 0.546806649 fathoms/m</span>
+dat<span class="op">$</span>fath &lt;-<span class="st"> </span>dat<span class="op">$</span>DEPTH<span class="op">*</span><span class="fl">0.546806649</span> <span class="co"># get depth in fathoms, 0.546806649 fathoms/m</span>
 fathom.categories &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;0-50&quot;</span>,<span class="st">&quot;50-60&quot;</span>,<span class="st">&quot;60-75&quot;</span>,<span class="st">&quot;75-100&quot;</span>,<span class="st">&quot;100-150&quot;</span>,<span class="st">&quot;150-200&quot;</span>,<span class="st">&quot;200-250&quot;</span>,<span class="st">&quot;250+&quot;</span>) <span class="co"># fathom bins used to define RCAs</span>
-dat$fath_categ &lt;-<span class="st"> </span><span class="kw">cut</span>(dat$fath, <span class="dt">breaks=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">50</span>,<span class="dv">60</span>,<span class="dv">75</span>,<span class="dv">100</span>,<span class="dv">150</span>,<span class="dv">200</span>,<span class="dv">250</span>,<span class="dv">1000</span>), <span class="dt">labels=</span>fathom.categories) <span class="co"># calculate fathom bins for haul locations</span>
-dat$id &lt;-<span class="st"> </span><span class="dv">1</span>:<span class="kw">dim</span>(dat)[<span class="dv">1</span>]
-dat$MONTH &lt;-<span class="st"> </span><span class="kw">format</span>(<span class="kw">as.Date</span>(dat$DATE),<span class="st">&quot;%b&quot;</span>)
+dat<span class="op">$</span>fath_categ &lt;-<span class="st"> </span><span class="kw">cut</span>(dat<span class="op">$</span>fath, <span class="dt">breaks=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">50</span>,<span class="dv">60</span>,<span class="dv">75</span>,<span class="dv">100</span>,<span class="dv">150</span>,<span class="dv">200</span>,<span class="dv">250</span>,<span class="dv">1000</span>), <span class="dt">labels=</span>fathom.categories) <span class="co"># calculate fathom bins for haul locations</span>
+dat<span class="op">$</span>id &lt;-<span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="kw">dim</span>(dat)[<span class="dv">1</span>]
+dat<span class="op">$</span>MONTH &lt;-<span class="st"> </span><span class="kw">format</span>(<span class="kw">as.Date</span>(dat<span class="op">$</span>DATE),<span class="st">&quot;%b&quot;</span>)
 
 <span class="co"># Don't need to check inRCA for depths &gt;250 fm or in 2002</span>
-checkRCA &lt;-<span class="st"> </span>dplyr::<span class="kw">filter</span>(dat, fath_categ!=<span class="st">&quot;250+&quot;</span>) <span class="co"># only could be in an RCA if depth &lt; 250 fm</span>
-checkRCA &lt;-<span class="st"> </span>dplyr::<span class="kw">filter</span>(checkRCA, YEAR!=<span class="dv">2002</span>) <span class="co"># no RCA closures in 2002</span>
+checkRCA &lt;-<span class="st"> </span>dplyr<span class="op">::</span><span class="kw">filter</span>(dat, fath_categ<span class="op">!=</span><span class="st">&quot;250+&quot;</span>) <span class="co"># only could be in an RCA if depth &lt; 250 fm</span>
+checkRCA &lt;-<span class="st"> </span>dplyr<span class="op">::</span><span class="kw">filter</span>(checkRCA, YEAR<span class="op">!=</span><span class="dv">2002</span>) <span class="co"># no RCA closures in 2002</span>
 
 <span class="co"># Construct inRCA covariate by matching haul year/month/lat/depth to RCA limits</span>
 <span class="co">#   takes about 1 min to do all locations</span>
-dat$inRCA &lt;-<span class="st"> </span><span class="dv">0</span> <span class="co"># add &quot;inRCA&quot; covariate (0 if not, 1 if yes)</span>
-dat$bin &lt;-<span class="st"> </span><span class="dv">0</span>
-for(j in <span class="dv">1</span>:<span class="kw">nrow</span>(checkRCA)){
-    i &lt;-<span class="st"> </span>checkRCA$id[j]
-    breaks &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">55</span>,rca %&gt;%<span class="st"> </span>dplyr::<span class="kw">filter</span>(Year==dat$YEAR[i]) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(Lat.low) %&gt;%<span class="st"> </span>unlist)
-    dat$bin[i] &lt;-<span class="st"> </span><span class="kw">cut</span>(dat$LAT[i],<span class="dt">breaks=</span>breaks,<span class="dt">labels=</span><span class="dv">1</span>:(<span class="kw">length</span>(breaks)-<span class="dv">1</span>))
-    low &lt;-<span class="st"> </span>rca.new %&gt;%<span class="st"> </span>dplyr::<span class="kw">filter</span>(Year==dat$YEAR[i],Month==dat$MONTH[i],LAT.bin==dat$bin[i]) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(close.low)
-    high &lt;-<span class="st"> </span>rca.new %&gt;%<span class="st"> </span>dplyr::<span class="kw">filter</span>(Year==dat$YEAR[i],Month==dat$MONTH[i],LAT.bin==dat$bin[i]) %&gt;%<span class="st"> </span>dplyr::<span class="kw">select</span>(close.high)
-    if(<span class="kw">abs</span>(dat$fath[i]) &lt;<span class="st"> </span>high &amp;<span class="st"> </span><span class="kw">abs</span>(dat$fath[i]) &gt;<span class="st"> </span>low) dat$inRCA[i] =<span class="st"> </span><span class="dv">1</span>
+dat<span class="op">$</span>inRCA &lt;-<span class="st"> </span><span class="dv">0</span> <span class="co"># add &quot;inRCA&quot; covariate (0 if not, 1 if yes)</span>
+dat<span class="op">$</span>bin &lt;-<span class="st"> </span><span class="dv">0</span>
+<span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">nrow</span>(checkRCA)){
+    i &lt;-<span class="st"> </span>checkRCA<span class="op">$</span>id[j]
+    breaks &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">55</span>,rca <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Year<span class="op">==</span>dat<span class="op">$</span>YEAR[i]) <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">select</span>(Lat.low) <span class="op">%&gt;%</span><span class="st"> </span>unlist)
+    dat<span class="op">$</span>bin[i] &lt;-<span class="st"> </span><span class="kw">cut</span>(dat<span class="op">$</span>LAT[i],<span class="dt">breaks=</span>breaks,<span class="dt">labels=</span><span class="dv">1</span><span class="op">:</span>(<span class="kw">length</span>(breaks)<span class="op">-</span><span class="dv">1</span>))
+    low &lt;-<span class="st"> </span>rca.new <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Year<span class="op">==</span>dat<span class="op">$</span>YEAR[i],Month<span class="op">==</span>dat<span class="op">$</span>MONTH[i],LAT.bin<span class="op">==</span>dat<span class="op">$</span>bin[i]) <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">select</span>(close.low)
+    high &lt;-<span class="st"> </span>rca.new <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Year<span class="op">==</span>dat<span class="op">$</span>YEAR[i],Month<span class="op">==</span>dat<span class="op">$</span>MONTH[i],LAT.bin<span class="op">==</span>dat<span class="op">$</span>bin[i]) <span class="op">%&gt;%</span><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">select</span>(close.high)
+    <span class="cf">if</span>(<span class="kw">abs</span>(dat<span class="op">$</span>fath[i]) <span class="op">&lt;</span><span class="st"> </span>high <span class="op">&amp;</span><span class="st"> </span><span class="kw">abs</span>(dat<span class="op">$</span>fath[i]) <span class="op">&gt;</span><span class="st"> </span>low) dat<span class="op">$</span>inRCA[i] =<span class="st"> </span><span class="dv">1</span>
 }</code></pre></div>
 </div>
 <div id="standardize-covariates" class="section level3">
 <h3>Standardize covariates</h3>
 <p>Now we transform, center (subtract mean), and create quadratic covariates. The original untransformed, uncentered data in ALL CAPS, e.g. DEPTH. The transformed, centered covariates ready to use in the models are in lower case, e.g. logDEPTH, logDEPTH2.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Log transform covariates on large scales</span>
-dat$logDEPTH &lt;-<span class="st"> </span><span class="kw">log</span>(dat$DEPTH)
+dat<span class="op">$</span>logDEPTH &lt;-<span class="st"> </span><span class="kw">log</span>(dat<span class="op">$</span>DEPTH)
 
 <span class="co"># Center/de-mean each covariate</span>
-dat$sst &lt;-<span class="st"> </span>dat$SST
-demean &lt;-<span class="st"> </span>function(vec){ <span class="kw">return</span>(vec -<span class="st"> </span><span class="kw">mean</span>(vec))}
+dat<span class="op">$</span>sst &lt;-<span class="st"> </span>dat<span class="op">$</span>SST
+demean &lt;-<span class="st"> </span><span class="cf">function</span>(vec){ <span class="kw">return</span>(vec <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(vec))}
 dat[,<span class="kw">c</span>(<span class="st">&quot;DAY&quot;</span>,<span class="st">&quot;logDEPTH&quot;</span>,<span class="st">&quot;sst&quot;</span>)] &lt;-<span class="st"> </span><span class="kw">apply</span>(dat[,<span class="kw">c</span>(<span class="st">&quot;DAY&quot;</span>,<span class="st">&quot;logDEPTH&quot;</span>,<span class="st">&quot;sst&quot;</span>)],<span class="dv">2</span>,demean)
 
 <span class="co"># Create squared covariates</span>
-dat$sst2 &lt;-<span class="st"> </span>dat$sst^<span class="dv">2</span>
-dat$logDEPTH2 &lt;-<span class="st"> </span>dat$logDEPTH^<span class="dv">2</span>
+dat<span class="op">$</span>sst2 &lt;-<span class="st"> </span>dat<span class="op">$</span>sst<span class="op">^</span><span class="dv">2</span>
+dat<span class="op">$</span>logDEPTH2 &lt;-<span class="st"> </span>dat<span class="op">$</span>logDEPTH<span class="op">^</span><span class="dv">2</span>
 
 <span class="co"># Turn categorical variables into factors</span>
-dat$YEAR &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$YEAR)
-dat$DBRK_01 &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$DBRK_01)
-dat$PHLB_01 &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$PHLB_01)
-dat$YEYE_01 &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$YEYE_01)
-dat$inRCA &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat$inRCA)</code></pre></div>
+dat<span class="op">$</span>YEAR &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat<span class="op">$</span>YEAR)
+dat<span class="op">$</span>DBRK_<span class="dv">01</span> &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat<span class="op">$</span>DBRK_<span class="dv">01</span>)
+dat<span class="op">$</span>PHLB_<span class="dv">01</span> &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat<span class="op">$</span>PHLB_<span class="dv">01</span>)
+dat<span class="op">$</span>YEYE_<span class="dv">01</span> &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat<span class="op">$</span>YEYE_<span class="dv">01</span>)
+dat<span class="op">$</span>inRCA &lt;-<span class="st"> </span><span class="kw">as.factor</span>(dat<span class="op">$</span>inRCA)</code></pre></div>
 </div>
 <div id="data-are-ready-to-fit" class="section level3">
 <h3>Data are ready to fit</h3>

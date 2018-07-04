@@ -2,7 +2,7 @@
 
 This repository contains code to run the analyses in:
 
-> Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. "Predicting spatiotemporal fisheries bycatch risk with species distribution models."
+> Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. "Comparing predictions of fisheries bycatch using multiple spatiotemporal species distribution model frameworks."
 
 Because the fisheries observer datasets we used are confidential ([WCGOP](https://www.nwfsc.noaa.gov/research/divisions/fram/observation/data_collection/manuals/2017%20WCGOP%20Training%20Manual%20Final%20website%20copy.pdf), [HILL](http://www.nmfs.noaa.gov/pr/interactions/fkwtrt/meeting1/handouts/observer_manual.pdf)), here we perform the same analyses using the publicly available [West Coast Groundfish Trawl Survey](https://www.nwfsc.noaa.gov/research/divisions/fram/groundfish/bottom_trawl.cfm).
 
@@ -25,7 +25,7 @@ Sets up and runs 10-fold cross validation for all spatial models:
   * RF DOWN (downsample)
   * RF SMOTE (upsample + downsample)
 
-*Note that in our manuscript we used 5-fold cross validation repeated 10x. We use 1x 10-fold CV here to save model run time.* We save the output of this script, so if you are not interested in running this step (takes ~40 hours on my computer), you can still see the model output.
+*Note that in our manuscript we used 5-fold cross validation repeated 10x. We use 1x 10-fold CV here to save model run time.* We save the output of this script, so if you are not interested in running this step (takes ~40 hours on my computer), you can still see the model code and output.
 
 #### [3_output](https://rawgit.com/brianstock/spatial-bycatch/master/3_output.html)
 

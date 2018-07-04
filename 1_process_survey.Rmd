@@ -1,7 +1,7 @@
 ---
 title: "Step 1: Process West Coast Groundfish Trawl Survey Data"
 author: "Brian Stock"
-date: "Sept 29, 2017"
+date: "July 3, 2018"
 output: html_vignette
 vignette: >
   %\VignetteEngine{knitr::rmarkdown}
@@ -15,7 +15,7 @@ knitr::opts_knit$set(root.dir = '/home/brian/Documents/Bycatch/spatial-bycatch')
 
 This vignette demonstrates how we ran the spatiotemporal models in:
 
-> Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. "Predicting spatiotemporal fisheries bycatch risk with species distribution models."
+> Stock BC, Ward EJ, Eguchi T, Jannot JE, Thorson JT, Feist BE, and Semmens BX. "Comparing predictions of fisheries bycatch using multiple spatiotemporal species distribution model frameworks."
 
 If you are not interested in the data processing, you can skip ahead to [2_run_models](https://rawgit.com/brianstock/spatial-bycatch/master/2_run_models.html), which uses the saved output of this script (`wcann_processed.RData`) to run the spatial models.
 
